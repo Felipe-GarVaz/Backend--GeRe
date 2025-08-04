@@ -154,4 +154,9 @@ public class VehicleReportServiceImp implements VehicleReportService {
             return dto;
         }).toList();
     }
+
+    @Override
+    public List<VehicleReport> getAllReports(){
+        return vehicleReportRepository.findAll();
+    }
 }

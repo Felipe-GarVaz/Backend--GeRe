@@ -2,8 +2,10 @@ package com.demo.GeVi.controller;
 
 import com.demo.GeVi.dto.VehicleDTO;
 import com.demo.GeVi.model.Vehicle;
+import com.demo.GeVi.model.VehicleReport;
 import com.demo.GeVi.repository.VehicleRepository;
 import com.demo.GeVi.service.VehicleExcelService;
+import com.demo.GeVi.service.VehicleReportService;
 import com.demo.GeVi.service.VehicleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -36,6 +38,9 @@ public class VehicleController {
 
     @Autowired
     private VehicleRepository vehicleRepository;
+
+    @Autowired
+    private VehicleReportService reportService;
 
     public VehicleController(VehicleRepository vehicleRepository) {
         this.vehicleRepository = vehicleRepository;
@@ -97,7 +102,9 @@ public class VehicleController {
     public ResponseEntity<byte[]> downloadExcel() {
         try {
             List<Vehicle> vehicle = service.getAllVehicles();
-            ByteArrayInputStream excel = VehicleExcelService.exportToExcel(vehicle);
+            List<VehicleReport> report = reportService.getAllReports();
+
+            ByteArrayInputStream excel = VehicleExcelService.exportToExcel(vehicle, report);
 
             // Obtener fecha actual en formato YYYY-MM-DD
             String date = java.time.LocalDate.now().toString(); 
