@@ -23,4 +23,6 @@ public interface DeviceReportRepository extends JpaRepository<DeviceReport, Inte
     List<DeviceReport> findLastReportsByTypeAndWorkCenter(
             @Param("type") DeviceType type,
             @Param("workCenterId") Integer workCenterId);
+
+    List<DeviceReport> findAllByOrderByReportingDateDesc(); 
 }

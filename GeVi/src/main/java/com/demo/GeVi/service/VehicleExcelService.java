@@ -2,29 +2,33 @@ package com.demo.GeVi.service;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.util.List;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+
 import com.demo.GeVi.model.Status;
 import com.demo.GeVi.model.Ubication;
 import com.demo.GeVi.model.Vehicle;
 import com.demo.GeVi.model.VehicleReport;
+
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class VehicleExcelService {
 
     public static ByteArrayInputStream exportToExcel(List<Vehicle> vehicle, List<VehicleReport> report)
             throws IOException {
 
-        try (
-                Workbook workbook = new XSSFWorkbook();
+        try (Workbook workbook = new XSSFWorkbook();
                 ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
             // ======================== HOJA 1: VEHÍCULOS ========================
             Sheet sheet = workbook.createSheet("Vehículos");
 
-            // Estilos
+            // Estilos generales
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -34,11 +38,11 @@ public class VehicleExcelService {
             headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
             CellStyle greenStyle = workbook.createCellStyle();
-            greenStyle.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+            greenStyle.setFillForegroundColor(IndexedColors.BRIGHT_GREEN.getIndex());
             greenStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
             CellStyle yellowStyle = workbook.createCellStyle();
-            yellowStyle.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+            yellowStyle.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
             yellowStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
             CellStyle redStyle = workbook.createCellStyle();
@@ -49,61 +53,31 @@ public class VehicleExcelService {
             Font summaryFont = workbook.createFont();
             summaryFont.setBold(true);
             summaryStyle.setFont(summaryFont);
+            summaryStyle.setFillForegroundColor(IndexedColors.LIGHT_ORANGE.getIndex());
+            summaryStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
             summaryStyle.setBorderTop(BorderStyle.THIN);
             summaryStyle.setBorderBottom(BorderStyle.THIN);
             summaryStyle.setBorderLeft(BorderStyle.THIN);
             summaryStyle.setBorderRight(BorderStyle.THIN);
 
-            // Fila 0 – Total de registros
-            int summaryCol = 11;
+            int tableStartRow = 7;
+            int dataStartRow = tableStartRow + 1;
 
-            Row totalRow = sheet.createRow(0);
-            Cell totalLabel = totalRow.createCell(summaryCol);
-            totalLabel.setCellValue("TOTAL:");
-            totalLabel.setCellStyle(summaryStyle);
-
-            Cell totalForm = totalRow.createCell(summaryCol + 1);
-            totalForm.setCellFormula("SUBTOTAL(103, A7:A" + (vehicle.size() + 6) + ")");
-            totalForm.setCellStyle(summaryStyle);
-
-            // Fila 1 – DISPONIBLES
-            Row availableRow = sheet.createRow(1);
-            availableRow.createCell(summaryCol).setCellValue("DISPONIBLES:");
-            availableRow.getCell(summaryCol).setCellStyle(summaryStyle);
-
-            Cell availableForm = availableRow.createCell(summaryCol + 1);
-            availableForm.setCellFormula(
-                    "SUMPRODUCT(SUBTOTAL(103,OFFSET(J7:J" + (vehicle.size() + 6) + ",ROW(J7:J" + (vehicle.size() + 6)
-                            + ")-ROW(J7),0,1)),--(J7:J" + (vehicle.size() + 6) + "=\"DISPONIBLE\"))");
-            availableForm.setCellStyle(summaryStyle);
-
-            // Fila 2 – CON FALLA:
-            Row withFailureRow = sheet.createRow(2);
-            withFailureRow.createCell(summaryCol).setCellValue("CON FALLA:");
-            withFailureRow.getCell(summaryCol).setCellStyle(summaryStyle);
-
-            Cell withFailureForm = withFailureRow.createCell(summaryCol + 1);
-            withFailureForm.setCellFormula(
-                    "SUMPRODUCT(SUBTOTAL(103,OFFSET(J7:J" + (vehicle.size() + 6) + ",ROW(J7:J" + (vehicle.size() + 6)
-                            + ")-ROW(J7),0,1)),--(J7:J" + (vehicle.size() + 6) + "=\"OPERANDO_CON_FALLA\"))");
-            withFailureForm.setCellStyle(summaryStyle);
-
-            // Fila 3 – INDISPONIBLES:
-            Row unavailableRow = sheet.createRow(3);
-            unavailableRow.createCell(summaryCol).setCellValue("INDISPONIBLES:");
-            unavailableRow.getCell(summaryCol).setCellStyle(summaryStyle);
-
-            Cell unvailableForm = unavailableRow.createCell(summaryCol + 1);
-            unvailableForm.setCellFormula(
-                    "SUMPRODUCT(SUBTOTAL(103,OFFSET(J7:J" + (vehicle.size() + 6) + ",ROW(J7:J" + (vehicle.size() + 6)
-                            + ")-ROW(J7),0,1)),--(J7:J" + (vehicle.size() + 6) + "=\"INDISPONIBLE\"))");
-            unvailableForm.setCellStyle(summaryStyle);
+            // Título resumen
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 1));
+            Row counterTitleRow = sheet.createRow(0);
+            Cell counterTitleCell = counterTitleRow.createCell(0);
+            counterTitleCell.setCellValue("Resumen de vehículos registrados");
+            counterTitleCell.setCellStyle(headerStyle);
 
             // Encabezados
-            String[] headers = { "Económico", "Placa", "Propiedad", "Kilometraje", "Marca", "Modelo", "Año",
-                    "Centro Trabajo", "Proceso", "Estado" };
+            String[] headers = {
+                    "Económico", "Placa", "Propiedad", "Kilometraje", "Marca",
+                    "Modelo", "Año", "Centro Trabajo", "Proceso", "Estado"
+            };
 
-            Row headerRow = sheet.createRow(5);
+            Row headerRow = sheet.createRow(tableStartRow);
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(headers[i]);
@@ -111,7 +85,7 @@ public class VehicleExcelService {
             }
 
             // Datos
-            int rowIdx = 6;
+            int rowIdx = dataStartRow;
             for (Vehicle v : vehicle) {
                 Row row = sheet.createRow(rowIdx++);
                 row.createCell(0).setCellValue(v.getEconomical());
@@ -127,196 +101,172 @@ public class VehicleExcelService {
                 Cell statusCell = row.createCell(9);
                 statusCell.setCellValue(v.getStatus().name());
 
-                switch (v.getStatus().name()) {
-                    case "DISPONIBLE":
+                switch (v.getStatus()) {
+                    case DISPONIBLE:
                         statusCell.setCellStyle(greenStyle);
                         break;
-                    case "DISPONIBLE_CON_FALLA":
+                    case OPERANDO_CON_FALLA:
                         statusCell.setCellStyle(yellowStyle);
                         break;
-                    case "INDISPONIBLE":
+                    case INDISPONIBLE:
                         statusCell.setCellStyle(redStyle);
                         break;
                 }
             }
 
-            for (int i = 0; i < headers.length; i++)
-                sheet.autoSizeColumn(i);
-            sheet.autoSizeColumn(summaryCol);
-            sheet.autoSizeColumn(summaryCol + 1);
+            // Rango final real de datos
+            int dataEndRow = rowIdx;
 
-            // Agrega autofiltro en encabezado hoja Vehiculos
-            sheet.setAutoFilter(new CellRangeAddress(5, rowIdx - 1, 0, headers.length - 1));
+            // Resumen
+            String[][] summary = {
+                    {
+                            "TOTAL:",
+                            "SUBTOTAL(103, J" + 9 + ":J" + dataEndRow + ")"
+                    },
+                    {
+                            "DISPONIBLES:",
+                            "SUMPRODUCT(SUBTOTAL(103,OFFSET(J" + 9 + ":J" + dataEndRow +
+                                    ",ROW(J" + 9 + ":J" + dataEndRow + ")-ROW(J" + 9
+                                    + "),0,1)),--(J" +
+                                    9 + ":J" + dataEndRow + "=\"DISPONIBLE\"))"
+                    },
+                    {
+                            "OPERANDO CON FALLA:",
+                            "SUMPRODUCT(SUBTOTAL(103,OFFSET(J" + 9 + ":J" + dataEndRow +
+                                    ",ROW(J" + 9 + ":J" + dataEndRow + ")-ROW(J" + 9
+                                    + "),0,1)),--(J" +
+                                    9 + ":J" + dataEndRow + "=\"OPERANDO_CON_FALLA\"))"
+                    },
+                    {
+                            "INDISPONIBLES:",
+                            "SUMPRODUCT(SUBTOTAL(103,OFFSET(J" + 9 + ":J" + dataEndRow +
+                                    ",ROW(J" + 9 + ":J" + dataEndRow + ")-ROW(J" + 9
+                                    + "),0,1)),--(J" +
+                                    9 + ":J" + dataEndRow + "=\"INDISPONIBLE\"))"
+                    }
+            };
+
+            for (int i = 0; i < summary.length; i++) {
+                Row row = sheet.createRow(1 + i);
+                Cell label = row.createCell(0);
+                label.setCellValue(summary[i][0]);
+                label.setCellStyle(summaryStyle);
+
+                Cell formula = row.createCell(1);
+                formula.setCellFormula(summary[i][1]);
+                formula.setCellStyle(summaryStyle);
+            }
+
+            // Autofiltro y autosize
+            sheet.setAutoFilter(new CellRangeAddress(tableStartRow, dataEndRow, 0, headers.length - 1));
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
 
             // ======================== HOJA 2: TALLER ========================
-            Sheet workshopSheet = workbook.createSheet("Taller");
-
-            // Estilos
-            CellStyle headerStyleWS = workbook.createCellStyle();
-            Font headerFontWS = workbook.createFont();
-            headerFontWS.setBold(true);
-            headerFontWS.setColor(IndexedColors.WHITE.getIndex());
-            headerStyleWS.setFont(headerFontWS);
-            headerStyleWS.setFillForegroundColor(IndexedColors.BLUE.getIndex());
-            headerStyleWS.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-            CellStyle summaryStyleWS = workbook.createCellStyle();
-            Font summaryFontWS = workbook.createFont();
-            summaryFontWS.setBold(true);
-            summaryStyleWS.setFont(summaryFontWS);
-            summaryStyleWS.setBorderTop(BorderStyle.THIN);
-            summaryStyleWS.setBorderBottom(BorderStyle.THIN);
-            summaryStyleWS.setBorderLeft(BorderStyle.THIN);
-            summaryStyleWS.setBorderRight(BorderStyle.THIN);
-
-            // Contador total
-            int summaryColWS = 6;
-
-            // Total parte superior
-            Row totalRowWS = workshopSheet.createRow(0);
-            Cell labelWS = totalRowWS.createCell(summaryColWS);
-            labelWS.setCellValue("TOTAL EN TALLER:");
-            labelWS.setCellStyle(summaryStyleWS);
-            Cell valueWS = totalRowWS.createCell(summaryColWS + 1);
-            valueWS.setCellStyle(summaryStyleWS);
-
-            // Encabezado
-            String[] wsHeaders = { "Económico", "Placa", "Centro Trabajo", "Falla", "Fecha Reporte",
-                    "Tiempo Transcurrido" };
-            Row headerRowWS = workshopSheet.createRow(2);
-            for (int i = 0; i < wsHeaders.length; i++) {
-                Cell cell = headerRowWS.createCell(i);
-                cell.setCellValue(wsHeaders[i]);
-                cell.setCellStyle(headerStyleWS);
-            }
-
-            // Datos
-            int rowIdxWS = 3;
-            for (VehicleReport r : report) {
-                if (r.getNewStatus() == Status.INDISPONIBLE && r.getLocationUnavailable() == Ubication.TALLER) {
-                    Row row = workshopSheet.createRow(rowIdxWS++);
-                    row.createCell(0).setCellValue(r.getVehicle().getEconomical());
-                    row.createCell(1).setCellValue(r.getVehicle().getBadge());
-                    row.createCell(2).setCellValue(r.getVehicle().getWorkCenter().getName());
-                    String fail = (r.getFailType() != null) ? r.getFailType().getName() : r.getPersonalizedFailure();
-                    row.createCell(3).setCellValue(fail);
-                    row.createCell(4).setCellValue(r.getReportingDate().toString());
-
-                    java.time.Duration duration = java.time.Duration.between(r.getReportingDate(),
-                            java.time.LocalDateTime.now());
-                    long totalMinutes = duration.getSeconds() / 60;
-                    long days = totalMinutes / (24 * 60);
-                    long hours = (totalMinutes % (24 * 60)) / 60;
-                    long minutes = totalMinutes % 60;
-                    String time = (days > 0)
-                            ? String.format("%dd %02dh %02dm", days, hours, minutes)
-                            : String.format("%02dh %02dm", hours, minutes);
-
-                    row.createCell(5).setCellValue(time);
-                }
-            }
-
-            // Aplicar fórmula dinámica correctamente al final del bloque de datos
-            if (rowIdxWS > 3) {
-                valueWS.setCellFormula("SUBTOTAL(103,A5:A" + rowIdxWS + ")");
-            } else {
-                valueWS.setCellValue(0);
-            }
-
-            // Agrega autofiltro en encabezado hoja Taller
-            workshopSheet.setAutoFilter(new CellRangeAddress(2, rowIdxWS - 1, 0, wsHeaders.length - 1));
+            createUnavailableSheet(workbook, report, "Taller", Ubication.TALLER);
 
             // ======================== HOJA 3: PATIO ========================
-            Sheet yardSheet = workbook.createSheet("Patio");
-
-            // Estilos
-            CellStyle headerStyleYard = workbook.createCellStyle();
-            Font headerFontYard = workbook.createFont();
-            headerFontYard.setBold(true);
-            headerFontYard.setColor(IndexedColors.WHITE.getIndex());
-            headerStyleYard.setFont(headerFontYard);
-            headerStyleYard.setFillForegroundColor(IndexedColors.BLUE.getIndex());
-            headerStyleYard.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-            CellStyle summaryStyleYard = workbook.createCellStyle();
-            Font summaryFontYard = workbook.createFont();
-            summaryFontYard.setBold(true);
-            summaryStyleYard.setFont(summaryFontYard);
-            summaryStyleYard.setBorderTop(BorderStyle.THIN);
-            summaryStyleYard.setBorderBottom(BorderStyle.THIN);
-            summaryStyleYard.setBorderLeft(BorderStyle.THIN);
-            summaryStyleYard.setBorderRight(BorderStyle.THIN);
-
-            // Total parte superior
-            int summaryColYard = 6;
-
-            Row totalRowTopYard = yardSheet.createRow(0);
-            Cell labelTopYard = totalRowTopYard.createCell(summaryColYard);
-            labelTopYard.setCellValue("TOTAL EN PATIO:");
-            labelTopYard.setCellStyle(summaryStyleYard);
-            Cell valueTopYard = totalRowTopYard.createCell(summaryColYard + 1);
-            valueTopYard.setCellStyle(summaryStyleYard);
-
-            // Encabezados
-            String[] yardHeaders = { "Económico", "Placa", "Centro Trabajo", "Falla", "Fecha Reporte",
-                    "Tiempo Transcurrido" };
-            Row headerRowYard = yardSheet.createRow(2);
-            for (int i = 0; i < yardHeaders.length; i++) {
-                Cell cell = headerRowYard.createCell(i);
-                cell.setCellValue(yardHeaders[i]);
-                cell.setCellStyle(headerStyleYard);
-            }
-
-            // Datos
-            int rowIdxYard = 3;
-            for (VehicleReport r : report) {
-                if (r.getNewStatus() == Status.INDISPONIBLE && r.getLocationUnavailable() == Ubication.PATIO) {
-                    Row row = yardSheet.createRow(rowIdxYard++);
-                    row.createCell(0).setCellValue(r.getVehicle().getEconomical());
-                    row.createCell(1).setCellValue(r.getVehicle().getBadge());
-                    row.createCell(2).setCellValue(r.getVehicle().getWorkCenter().getName());
-                    String fail = (r.getFailType() != null) ? r.getFailType().getName() : r.getPersonalizedFailure();
-                    row.createCell(3).setCellValue(fail);
-                    row.createCell(4).setCellValue(r.getReportingDate().toString());
-
-                    java.time.Duration duration = java.time.Duration.between(r.getReportingDate(),
-                            java.time.LocalDateTime.now());
-                    long totalMinutes = duration.getSeconds() / 60;
-                    long days = totalMinutes / (24 * 60);
-                    long hours = (totalMinutes % (24 * 60)) / 60;
-                    long minutes = totalMinutes % 60;
-
-                    String time = (days > 0)
-                            ? String.format("%dd %02dh %02dm", days, hours, minutes)
-                            : String.format("%02dh %02dm", hours, minutes);
-                    row.createCell(5).setCellValue(time);
-                }
-            }
-
-            // Fórmula dinámica para total en Patio (solo visibles al filtrar)
-            if (rowIdxYard > 3) {
-                valueTopYard.setCellFormula("SUBTOTAL(103,A5:A" + rowIdxYard + ")");
-            }else {
-                valueTopYard.setCellValue(0);
-            }
-
-            // Agrega autofiltro en encabezado hoja Patio
-            yardSheet.setAutoFilter(new CellRangeAddress(2, rowIdxYard - 1, 0, yardHeaders.length - 1));
-
-            // Autoajustar columnas
-            for (int i = 0; i < yardHeaders.length; i++)
-                yardSheet.autoSizeColumn(i);
-            yardSheet.autoSizeColumn(6);
-            yardSheet.autoSizeColumn(7);
-
-            // Ajustar columnas
-            for (int i = 0; i < wsHeaders.length; i++)
-                workshopSheet.autoSizeColumn(i);
-            workshopSheet.autoSizeColumn(6);
-            workshopSheet.autoSizeColumn(7);
+            createUnavailableSheet(workbook, report, "Patio", Ubication.PATIO);
 
             workbook.write(out);
             return new ByteArrayInputStream(out.toByteArray());
+        }
+    }
+
+    private static void createUnavailableSheet(Workbook workbook, List<VehicleReport> reports, String sheetName,
+            Ubication ubication) {
+        Sheet sheet = workbook.createSheet(sheetName);
+
+        // Estilos
+        CellStyle headerStyle = workbook.createCellStyle();
+        Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerFont.setColor(IndexedColors.WHITE.getIndex());
+        headerStyle.setFont(headerFont);
+        headerStyle.setFillForegroundColor(IndexedColors.BLUE.getIndex());
+        headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        CellStyle summaryStyle = workbook.createCellStyle();
+        Font summaryFont = workbook.createFont();
+        summaryFont.setBold(true);
+        summaryStyle.setFont(summaryFont);
+        summaryStyle.setFillForegroundColor(IndexedColors.LIGHT_ORANGE.getIndex());
+        summaryStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        summaryStyle.setBorderTop(BorderStyle.THIN);
+        summaryStyle.setBorderBottom(BorderStyle.THIN);
+        summaryStyle.setBorderLeft(BorderStyle.THIN);
+        summaryStyle.setBorderRight(BorderStyle.THIN);
+
+        // Título del resumen visual
+        sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 1));
+        Row titleRow = sheet.createRow(0);
+        Cell titleCell = titleRow.createCell(0);
+        titleCell.setCellValue("Resumen de vehículos en " + sheetName.toLowerCase());
+        titleCell.setCellStyle(headerStyle);
+
+        // Contador total
+        int summaryCol = 0;
+        Row totalRow = sheet.createRow(1);
+        Cell label = totalRow.createCell(summaryCol);
+        label.setCellValue("TOTAL EN " + sheetName.toUpperCase() + ":");
+        label.setCellStyle(summaryStyle);
+        Cell valueCell = totalRow.createCell(summaryCol + 1);
+        valueCell.setCellStyle(summaryStyle);
+
+        // Encabezado
+        String[] headers = { "Económico", "Placa", "Centro Trabajo", "Falla", "Fecha Reporte", "Tiempo Transcurrido" };
+        Row headerRow = sheet.createRow(4);
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(headerStyle);
+        }
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        int dataStartRow = 5;
+        int rowIdx = dataStartRow;
+
+        for (VehicleReport r : reports) {
+            if (r.getNewStatus() == Status.INDISPONIBLE && r.getLocationUnavailable() == ubication) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(r.getVehicle().getEconomical());
+                row.createCell(1).setCellValue(r.getVehicle().getBadge());
+                row.createCell(2).setCellValue(r.getVehicle().getWorkCenter().getName());
+
+                String fail = (r.getFailType() != null)
+                        ? r.getFailType().getName()
+                        : r.getPersonalizedFailure();
+                row.createCell(3).setCellValue(fail != null ? fail : "N/A");
+
+                row.createCell(4).setCellValue(r.getReportingDate().format(formatter));
+
+                Duration duration = Duration.between(r.getReportingDate(), LocalDateTime.now());
+                long days = duration.toDays();
+                long hours = duration.toHoursPart();
+                long minutes = duration.toMinutesPart();
+
+                String time = (days > 0)
+                        ? String.format("%dd %02dh %02dm", days, hours, minutes)
+                        : String.format("%02dh %02dm", hours, minutes);
+
+                row.createCell(5).setCellValue(time);
+            }
+        }
+
+        int firstDataRowExcel = dataStartRow + 1;
+        int lastDataRowExcel = rowIdx;
+
+        if (rowIdx > dataStartRow) {
+            valueCell.setCellFormula("SUBTOTAL(103,A" + firstDataRowExcel + ":A" + lastDataRowExcel + ")");
+        } else {
+            valueCell.setCellValue(0);
+        }
+
+        sheet.setAutoFilter(new CellRangeAddress(4, rowIdx - 1, 0, headers.length - 1));
+        for (int i = 0; i < headers.length; i++) {
+            sheet.autoSizeColumn(i);
         }
     }
 }
