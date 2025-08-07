@@ -1,4 +1,4 @@
-package com.demo.GeVi.service;
+package com.demo.GeVi.service.Implements;
 
 import com.demo.GeVi.dto.VehicleDTO;
 import com.demo.GeVi.exception.ResourceNotFoundException;
@@ -10,6 +10,8 @@ import com.demo.GeVi.model.WorkCenter;
 import com.demo.GeVi.repository.ProcessRepository;
 import com.demo.GeVi.repository.VehicleRepository;
 import com.demo.GeVi.repository.WorkCenterRepository;
+import com.demo.GeVi.service.VehicleService;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -40,40 +42,37 @@ public class VehicleServiceImpl implements VehicleService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    /**
+     * Filtra vehículos dinámicamente por centro, proceso, estado, propiedad o económico.
+     */
     @Override
-    public List<VehicleDTO> findAll(Integer workCenterId, Integer processId, String status, String property,
-            String economical) {
+    public List<VehicleDTO> findAll(Integer workCenterId, Integer processId, String status, String property, String economical) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Vehicle> query = cb.createQuery(Vehicle.class);
         Root<Vehicle> root = query.from(Vehicle.class);
 
         List<Predicate> predicates = new ArrayList<>();
 
-        if (workCenterId != null) {
+        if (workCenterId != null)
             predicates.add(cb.equal(root.get("workCenter").get("id"), workCenterId));
-        }
-        if (processId != null) {
+        if (processId != null)
             predicates.add(cb.equal(root.get("process").get("id"), processId));
-        }
-        if (status != null && !status.isEmpty()) {
+        if (status != null && !status.isEmpty())
             predicates.add(cb.equal(root.get("status"), Status.valueOf(status)));
-        }
-        if (property != null && !property.isEmpty()) {
+        if (property != null && !property.isEmpty())
             predicates.add(cb.equal(root.get("property"), Property.valueOf(property)));
-        }
-        if (economical != null && !economical.isEmpty()) {
+        if (economical != null && !economical.isEmpty())
             predicates.add(cb.like(cb.lower(root.get("economical")), "%" + economical.toLowerCase() + "%"));
-        }
 
         query.where(cb.and(predicates.toArray(new Predicate[0])));
-
         List<Vehicle> vehicles = entityManager.createQuery(query).getResultList();
 
-        return vehicles.stream()
-                .map(this::fromEntity)
-                .collect(Collectors.toList());
+        return vehicles.stream().map(this::fromEntity).collect(Collectors.toList());
     }
 
+    /**
+     * Guarda un nuevo vehículo.
+     */
     @Override
     public VehicleDTO save(VehicleDTO dto) {
         Vehicle vehicle = toEntity(dto);
@@ -81,6 +80,9 @@ public class VehicleServiceImpl implements VehicleService {
         return fromEntity(saved);
     }
 
+    /**
+     * Actualiza un vehículo existente por ID.
+     */
     @Override
     public VehicleDTO update(Integer id, VehicleDTO dto) {
         Vehicle existing = vehicleRepository.findById(id)
@@ -108,13 +110,66 @@ public class VehicleServiceImpl implements VehicleService {
         return fromEntity(updated);
     }
 
+    /**
+     * Devuelve opciones de filtro dinámico para el frontend.
+     */
     @Override
-    public void delete(Integer id) {
-        if (!vehicleRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Vehicle", "id", id);
-        }
-        vehicleRepository.deleteById(id);
+    public Map<String, List<Map<String, Object>>> getFilterOptions() {
+        List<Map<String, Object>> workCenters = workCenterRepository.findAll().stream().map(wc -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", wc.getId());
+            m.put("name", wc.getName());
+            return m;
+        }).collect(Collectors.toList());
+
+        List<Map<String, Object>> processes = processRepository.findAll().stream().map(p -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", p.getId());
+            m.put("name", p.getName());
+            return m;
+        }).collect(Collectors.toList());
+
+        List<Map<String, Object>> statuses = Arrays.stream(Status.values()).map(s -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", s.name());
+            m.put("name", s.name().replace("_", " "));
+            return m;
+        }).collect(Collectors.toList());
+
+        List<Map<String, Object>> properties = Arrays.stream(Property.values()).map(p -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", p.name());
+            m.put("name", p.name());
+            return m;
+        }).collect(Collectors.toList());
+
+        Map<String, List<Map<String, Object>>> options = new HashMap<>();
+        options.put("centroTrabajo", workCenters);
+        options.put("proceso", processes);
+        options.put("estado", statuses);
+        options.put("propiedad", properties);
+
+        return options;
     }
+
+    /**
+     * Busca vehículos por número económico o placa.
+     */
+    @Override
+    public List<VehicleDTO> searchVehicles(String query) {
+        List<Vehicle> vehicles = vehicleRepository.searchByEconomicalOrBadge(query);
+        return vehicles.stream().map(this::fromEntity).collect(Collectors.toList());
+    }
+
+    /**
+     * Obtiene todos los vehículos registrados.
+     */
+    @Override
+    public List<Vehicle> getAllVehicles() {
+        return vehicleRepository.findAll();
+    }
+
+    // ===== Métodos auxiliares =====
 
     private VehicleDTO fromEntity(Vehicle v) {
         VehicleDTO dto = new VehicleDTO();
@@ -132,7 +187,6 @@ public class VehicleServiceImpl implements VehicleService {
             dto.setWorkCenterId(v.getWorkCenter().getId());
             dto.setWorkCenterName(v.getWorkCenter().getName());
         }
-
         if (v.getProcess() != null) {
             dto.setProcessId(v.getProcess().getId());
             dto.setProcessName(v.getProcess().getName());
@@ -160,70 +214,5 @@ public class VehicleServiceImpl implements VehicleService {
 
         v.setStatus(Status.valueOf(dto.getStatus().toUpperCase().replace(' ', '_')));
         return v;
-    }
-
-    @Override
-    public Map<String, List<Map<String, Object>>> getFilterOptions() {
-        // Centro de trabajo
-        List<Map<String, Object>> workCenters = workCenterRepository.findAll()
-                .stream()
-                .map(wc -> {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("id", wc.getId());
-                    m.put("name", wc.getName());
-                    return m;
-                })
-                .collect(Collectors.toList());
-
-        // Procesos
-        List<Map<String, Object>> processes = processRepository.findAll()
-                .stream()
-                .map(p -> {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("id", p.getId());
-                    m.put("name", p.getName());
-                    return m;
-                })
-                .collect(Collectors.toList());
-
-        // Estados (enum)
-        List<Map<String, Object>> statuses = Arrays.stream(Status.values())
-                .map(s -> {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("id", s.name());
-                    m.put("name", s.name().replace("_", " "));
-                    return m;
-                })
-                .collect(Collectors.toList());
-
-        // Propiedades (enum)
-        List<Map<String, Object>> properties = Arrays.stream(Property.values())
-                .map(p -> {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("id", p.name());
-                    m.put("name", p.name());
-                    return m;
-                })
-                .collect(Collectors.toList());
-
-        // Empaquetamos todo
-        Map<String, List<Map<String, Object>>> options = new HashMap<>();
-        options.put("centroTrabajo", workCenters);
-        options.put("proceso", processes);
-        options.put("estado", statuses);
-        options.put("propiedad", properties);
-
-        return options;
-    }
-
-    @Override
-    public List<VehicleDTO> searchVehicles(String query) {
-        List<Vehicle> vehicles = vehicleRepository.searchByEconomicalOrBadge(query);
-        return vehicles.stream().map(VehicleDTO::fromEntity).toList();
-    }
-
-    @Override
-    public List<Vehicle> getAllVehicles(){
-        return vehicleRepository.findAll();
     }
 }

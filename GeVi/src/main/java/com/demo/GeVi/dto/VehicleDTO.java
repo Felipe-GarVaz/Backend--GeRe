@@ -1,18 +1,20 @@
 package com.demo.GeVi.dto;
 
 import java.time.Year;
-import com.demo.GeVi.model.Vehicle;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
-@AllArgsConstructor
+import com.demo.GeVi.model.Vehicle;
+
+/*
+ * DTO que representa la información básica de un vehículo.
+ * Usado para visualización, filtrado y exportación.
+ */
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class VehicleDTO {
 
     private Integer id;

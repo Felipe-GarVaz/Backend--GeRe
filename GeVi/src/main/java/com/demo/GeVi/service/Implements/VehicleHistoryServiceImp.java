@@ -1,26 +1,31 @@
-package com.demo.GeVi.service;
+package com.demo.GeVi.service.Implements;
 
 import org.springframework.stereotype.Service;
+
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
 import com.demo.GeVi.dto.VehicleHistoryDTO;
 import com.demo.GeVi.model.Status;
 import com.demo.GeVi.model.VehicleReport;
 import com.demo.GeVi.repository.VehicleHistoryRepository;
+import com.demo.GeVi.service.VehicleHistoryService;
 
+/**
+ * Implementación del servicio de historial de reportes de vehículos.
+ */
 @Service
 public class VehicleHistoryServiceImp implements VehicleHistoryService {
 
-    private VehicleHistoryRepository vehicleHistoryRepository;
+    private final VehicleHistoryRepository vehicleHistoryRepository;
 
     public VehicleHistoryServiceImp(VehicleHistoryRepository vehicleHistoryRepository) {
         this.vehicleHistoryRepository = vehicleHistoryRepository;
     }
 
+    /**
+     * Convierte segundos a formato legible con días y hh:mm:ss.
+     */
     private String formatSeconds(long seconds) {
         long d = seconds / 86400;
         long h = (seconds % 86400) / 3600;
@@ -29,14 +34,15 @@ public class VehicleHistoryServiceImp implements VehicleHistoryService {
         return (d > 0 ? d + "d " : "") + String.format("%02d:%02d:%02d", h, m, s);
     }
 
+    /**
+     * Devuelve historial de reportes para un vehículo buscado.
+     */
     @Override
     public List<VehicleHistoryDTO> getVehicleHistory(String searchTerm) {
         List<VehicleReport> reports = vehicleHistoryRepository.searchByEconomicalOrBadge(searchTerm);
-
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
-        // Ordenar por vehículo y fecha de reporte
         reports.sort(Comparator
                 .comparing((VehicleReport r) -> r.getVehicle().getId())
                 .thenComparing(VehicleReport::getReportingDate));
@@ -46,7 +52,6 @@ public class VehicleHistoryServiceImp implements VehicleHistoryService {
 
         for (VehicleReport report : reports) {
             Integer vehicleId = report.getVehicle().getId();
-
             Status previousStatus = lastStatusByVehicle.getOrDefault(vehicleId, Status.DISPONIBLE);
 
             VehicleHistoryDTO dto = new VehicleHistoryDTO();
@@ -60,9 +65,7 @@ public class VehicleHistoryServiceImp implements VehicleHistoryService {
             dto.setFailType(
                     report.getFailType() != null ? report.getFailType().getName() : report.getPersonalizedFailure());
             dto.setLocalitation(
-                    report.getLocationUnavailable() != null
-                            ? report.getLocationUnavailable().name()
-                            : null);
+                    report.getLocationUnavailable() != null ? report.getLocationUnavailable().name() : null);
             dto.setReportedBy(report.getUser().getName() + " " + report.getUser().getLastName());
             dto.setRpe(report.getUser().getRpe());
             dto.setMileage(report.getMileage());
@@ -73,12 +76,15 @@ public class VehicleHistoryServiceImp implements VehicleHistoryService {
             }
 
             lastStatusByVehicle.put(vehicleId, report.getNewStatus());
-
             historyList.add(dto);
         }
+
         return historyList;
     }
 
+    /**
+     * Devuelve sugerencias de búsqueda (económico - placa).
+     */
     @Override
     public List<String> getSuggestions() {
         List<VehicleReport> reports = vehicleHistoryRepository.findAll();

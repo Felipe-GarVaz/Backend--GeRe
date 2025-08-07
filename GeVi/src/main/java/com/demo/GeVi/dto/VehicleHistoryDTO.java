@@ -2,15 +2,16 @@ package com.demo.GeVi.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
-@AllArgsConstructor
+/*
+ * DTO que representa un historial de reporte de un vehículo,
+ * incluyendo información del estado, falla, ubicación, kilometraje,
+ * usuario y la duración que estuvo activo ese reporte.
+ */
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class VehicleHistoryDTO {
 
     private Integer id;

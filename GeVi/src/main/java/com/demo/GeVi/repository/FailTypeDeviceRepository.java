@@ -5,6 +5,5 @@ import org.springframework.stereotype.Repository;
 import com.demo.GeVi.model.FailTypeDevice;
 
 @Repository
-public interface FailTypeDeviceRepository extends JpaRepository<FailTypeDevice, Integer>{
-    
+public interface FailTypeDeviceRepository extends JpaRepository<FailTypeDevice, Integer> {
 }

@@ -7,22 +7,38 @@ import com.demo.GeVi.model.Vehicle;
 
 public interface VehicleService {
 
+    /*
+     * Obtiene vehículos filtrados por centro, proceso, estado, propiedad o
+     * búsqueda.
+     */
     List<VehicleDTO> findAll(Integer workCenterId,
             Integer processId,
             String status,
             String property,
             String search);
 
+    /*
+     * Guarda un nuevo vehículo.
+     */
     VehicleDTO save(VehicleDTO dto);
 
+    /*
+     * Actualiza un vehículo existente.
+     */
     VehicleDTO update(Integer id, VehicleDTO dto);
 
-    void delete(Integer id);
-
+    /*
+     * Devuelve opciones para filtros dinámicos.
+     */
     Map<String, List<Map<String, Object>>> getFilterOptions();
 
-    public List<VehicleDTO> searchVehicles(String query);
+    /*
+     * Busca vehículos por texto (económico o placa).
+     */
+    List<VehicleDTO> searchVehicles(String query);
 
-    List <Vehicle> getAllVehicles();
-
+    /*
+     * Retorna todos los vehículos sin filtros.
+     */
+    List<Vehicle> getAllVehicles();
 }

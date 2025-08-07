@@ -9,7 +9,9 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -17,15 +19,17 @@ import java.util.List;
 
 public class DeviceExcelService {
 
+    /*
+     * Exporta dispositivos y reportes a un archivo Excel con resumen y detalles.
+     */
     public static ByteArrayInputStream exportToExcel(List<Device> devices, List<DeviceReport> reports)
             throws IOException {
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-            // ======================== HOJA 1: DISPOSITIVOS ========================
+            // ===== Hoja 1: Dispositivos =====
             Sheet sheet = workbook.createSheet("Dispositivos");
 
-            // Estilos
             CellStyle headerStyle = createHeaderStyle(workbook);
             CellStyle greenStyle = createSolidStyle(workbook, IndexedColors.BRIGHT_GREEN);
             CellStyle redStyle = createSolidStyle(workbook, IndexedColors.RED);
@@ -34,14 +38,14 @@ public class DeviceExcelService {
             int tableStartRow = 7;
             int dataStartRow = tableStartRow + 1;
 
-            // Título resumen
+            // Título
             sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 1));
             Row titleRow = sheet.createRow(0);
             Cell titleCell = titleRow.createCell(0);
             titleCell.setCellValue("Resumen de dispositivos registrados");
             titleCell.setCellStyle(headerStyle);
 
-            // Encabezado tabla
+            // Encabezados
             String[] headers = { "Centro de Trabajo", "Número de Serie", "Tipo de Dispositivo", "Estado" };
             Row headerRow = sheet.createRow(tableStartRow);
             for (int i = 0; i < headers.length; i++) {
@@ -64,19 +68,15 @@ public class DeviceExcelService {
             }
 
             int dataEndRow = rowIdx;
-
-            // Fórmulas resumen
             String colRef = "C" + (dataStartRow + 1) + ":C" + dataEndRow;
+
+            // Resumen
             String[][] summary = {
-                    { "TOTAL:", "SUBTOTAL(103, C" + (dataStartRow + 1) + ":C" + dataEndRow + ")" },
-                    { "TP NEWLAND:", "SUMPRODUCT(SUBTOTAL(103,OFFSET(" + colRef + ",ROW(" + colRef + ")-ROW(C"
-                            + (dataStartRow + 1) + "),0,1)),--(" + colRef + "=\"TP_NEWLAND\"))" },
-                    { "LECTOR NEWLAND:", "SUMPRODUCT(SUBTOTAL(103,OFFSET(" + colRef + ",ROW(" + colRef + ")-ROW(C"
-                            + (dataStartRow + 1) + "),0,1)),--(" + colRef + "=\"LECTOR_NEWLAND\"))" },
-                    { "TP DOLPHIN 9900:", "SUMPRODUCT(SUBTOTAL(103,OFFSET(" + colRef + ",ROW(" + colRef + ")-ROW(C"
-                            + (dataStartRow + 1) + "),0,1)),--(" + colRef + "=\"TP_DOLPHIN_9900\"))" },
-                    { "LECTOR DOLPHIN 9900:", "SUMPRODUCT(SUBTOTAL(103,OFFSET(" + colRef + ",ROW(" + colRef
-                            + ")-ROW(C" + (dataStartRow + 1) + "),0,1)),--(" + colRef + "=\"LECTOR_DOLPHIN_9900\"))" }
+                { "TOTAL:", "SUBTOTAL(103, " + colRef + ")" },
+                { "TP NEWLAND:", getSubtotalFormula(colRef, "TP_NEWLAND", dataStartRow) },
+                { "LECTOR NEWLAND:", getSubtotalFormula(colRef, "LECTOR_NEWLAND", dataStartRow) },
+                { "TP DOLPHIN 9900:", getSubtotalFormula(colRef, "TP_DOLPHIN_9900", dataStartRow) },
+                { "LECTOR DOLPHIN 9900:", getSubtotalFormula(colRef, "LECTOR_DOLPHIN_9900", dataStartRow) }
             };
 
             for (int i = 0; i < summary.length; i++) {
@@ -90,13 +90,10 @@ public class DeviceExcelService {
                 formula.setCellStyle(summaryStyle);
             }
 
-            // Filtros y tamaño automático
             sheet.setAutoFilter(new CellRangeAddress(tableStartRow, dataEndRow - 1, 0, headers.length - 1));
-            for (int i = 0; i < headers.length; i++) {
-                sheet.autoSizeColumn(i);
-            }
+            for (int i = 0; i < headers.length; i++) sheet.autoSizeColumn(i);
 
-            // ======================== HOJA 2: DEFECTUOSOS ========================
+            // ===== Hoja 2: Defectuosos =====
             createDefectSheet(workbook, reports, devices);
 
             workbook.write(out);
@@ -104,26 +101,22 @@ public class DeviceExcelService {
         }
     }
 
+    // ===== Hoja Defectuosos =====
     private static void createDefectSheet(Workbook workbook, List<DeviceReport> reports, List<Device> devices) {
         Sheet sheet = workbook.createSheet("Defectuosos");
         CellStyle headerStyle = createHeaderStyle(workbook);
         CellStyle summaryStyle = createSummaryStyle(workbook);
 
-        // Titulo resumen
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 1));
         Row titleRow = sheet.createRow(0);
         Cell titleCell = titleRow.createCell(0);
         titleCell.setCellValue("Resumen de dispositivos defectuosos");
         titleCell.setCellStyle(headerStyle);
 
-        // Encabezados
         int tableStartRow = 7;
         int dataStartRow = tableStartRow + 1;
+        String[] headers = { "Centro de Trabajo", "Número de Serie", "Tipo de Dispositivo", "Falla", "Fecha de Reporte", "Tiempo Transcurrido" };
 
-        String[] headers = {
-                "Centro de Trabajo", "Número de Serie", "Tipo de Dispositivo",
-                "Falla", "Fecha de Reporte", "Tiempo Transcurrido"
-        };
         Row headerRow = sheet.createRow(tableStartRow);
         for (int i = 0; i < headers.length; i++) {
             Cell cell = headerRow.createCell(i);
@@ -131,21 +124,16 @@ public class DeviceExcelService {
             cell.setCellStyle(headerStyle);
         }
 
-        // Datos
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         int rowIdx = dataStartRow;
         for (DeviceReport r : reports) {
             Row row = sheet.createRow(rowIdx++);
-
             row.createCell(0).setCellValue(r.getWorkCenter().getName());
-
             String serial = findSerialByTypeAndCenter(devices, r.getDevice(), r.getWorkCenter().getId());
             row.createCell(1).setCellValue(serial != null ? serial : "N/A");
-
             row.createCell(2).setCellValue(r.getDevice().name());
 
-            String fail = (r.getFailTypeDevice() != null) ? r.getFailTypeDevice().getName()
-                    : r.getPersonalizedFailure();
+            String fail = (r.getFailTypeDevice() != null) ? r.getFailTypeDevice().getName() : r.getPersonalizedFailure();
             row.createCell(3).setCellValue(fail != null ? fail : "N/A");
 
             row.createCell(4).setCellValue(r.getReportingDate().format(formatter));
@@ -155,17 +143,12 @@ public class DeviceExcelService {
         int dataEndRow = rowIdx;
         String colRef = "C" + (dataStartRow + 1) + ":C" + dataEndRow;
 
-        // Resumen
         String[][] summary = {
-                { "TOTAL EN DEFECTUOSOS:", "SUBTOTAL(103, C" + (dataStartRow + 1) + ":C" + dataEndRow + ")" },
-                { "TP NEWLAND:", "SUMPRODUCT(SUBTOTAL(103,OFFSET(" + colRef + ",ROW(" + colRef + ")-ROW(C"
-                        + (dataStartRow + 1) + "),0,1)),--(" + colRef + "=\"TP_NEWLAND\"))" },
-                { "LECTOR NEWLAND:", "SUMPRODUCT(SUBTOTAL(103,OFFSET(" + colRef + ",ROW(" + colRef + ")-ROW(C"
-                        + (dataStartRow + 1) + "),0,1)),--(" + colRef + "=\"LECTOR_NEWLAND\"))" },
-                { "TP DOLPHIN 9900:", "SUMPRODUCT(SUBTOTAL(103,OFFSET(" + colRef + ",ROW(" + colRef + ")-ROW(C"
-                        + (dataStartRow + 1) + "),0,1)),--(" + colRef + "=\"TP_DOLPHIN_9900\"))" },
-                { "LECTOR DOLPHIN 9900:", "SUMPRODUCT(SUBTOTAL(103,OFFSET(" + colRef + ",ROW(" + colRef
-                        + ")-ROW(C" + (dataStartRow + 1) + "),0,1)),--(" + colRef + "=\"LECTOR_DOLPHIN_9900\"))" }
+            { "TOTAL EN DEFECTUOSOS:", "SUBTOTAL(103, " + colRef + ")" },
+            { "TP NEWLAND:", getSubtotalFormula(colRef, "TP_NEWLAND", dataStartRow) },
+            { "LECTOR NEWLAND:", getSubtotalFormula(colRef, "LECTOR_NEWLAND", dataStartRow) },
+            { "TP DOLPHIN 9900:", getSubtotalFormula(colRef, "TP_DOLPHIN_9900", dataStartRow) },
+            { "LECTOR DOLPHIN 9900:", getSubtotalFormula(colRef, "LECTOR_DOLPHIN_9900", dataStartRow) }
         };
 
         for (int i = 0; i < summary.length; i++) {
@@ -179,13 +162,11 @@ public class DeviceExcelService {
             formula.setCellStyle(summaryStyle);
         }
 
-        // Filtros
         sheet.setAutoFilter(new CellRangeAddress(tableStartRow, dataEndRow - 1, 0, headers.length - 1));
-        for (int i = 0; i < headers.length; i++) {
-            sheet.autoSizeColumn(i);
-        }
+        for (int i = 0; i < headers.length; i++) sheet.autoSizeColumn(i);
     }
 
+    // ===== Metodos auxiliares =====
     private static String formatElapsed(Duration d) {
         long days = d.toDays();
         long hrs = d.toHoursPart();
@@ -195,14 +176,16 @@ public class DeviceExcelService {
 
     private static String findSerialByTypeAndCenter(List<Device> devices, DeviceType type, Integer centerId) {
         return devices.stream()
-                .filter(d -> d.getDeviceType().equals(type) && d.getWorkCenter().getId().equals(centerId)
-                        && d.getStatus() == DeviceStatus.DEFECTUOSO)
+                .filter(d -> d.getDeviceType().equals(type) && d.getWorkCenter().getId().equals(centerId) && d.getStatus() == DeviceStatus.DEFECTUOSO)
                 .map(Device::getSerialNumber)
                 .findFirst()
                 .orElse(null);
     }
 
-    // Estilos
+    private static String getSubtotalFormula(String colRef, String value, int startRow) {
+        return "SUMPRODUCT(SUBTOTAL(103,OFFSET(" + colRef + ",ROW(" + colRef + ")-ROW(C" + (startRow + 1) + "),0,1)),--(" + colRef + "=\"" + value + "\"))";
+    }
+
     private static CellStyle createHeaderStyle(Workbook wb) {
         CellStyle style = wb.createCellStyle();
         Font font = wb.createFont();

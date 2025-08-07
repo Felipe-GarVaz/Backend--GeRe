@@ -1,4 +1,4 @@
-package com.demo.GeVi.service;
+package com.demo.GeVi.service.Implements;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,6 +17,7 @@ import com.demo.GeVi.repository.DeviceReportRepository;
 import com.demo.GeVi.repository.DeviceRepository;
 import com.demo.GeVi.repository.FailTypeDeviceRepository;
 import com.demo.GeVi.repository.WorkCenterRepository;
+import com.demo.GeVi.service.DeviceReportService;
 
 @Service
 public class DeviceReportServiceImp implements DeviceReportService {

@@ -12,8 +12,17 @@ import com.demo.GeVi.model.DeviceReport;
 
 @Repository
 public interface DeviceReportRepository extends JpaRepository<DeviceReport, Integer> {
+
+    /*
+     * Obtiene todos los reportes realizados en un centro de trabajo específico.
+     */
     List<DeviceReport> findByWorkCenterId(Integer workCenterId);
 
+    /*
+     * Obtiene los reportes más recientes de dispositivos filtrando por tipo y
+     * centro de trabajo.
+     * Ordenados por fecha de reporte descendente.
+     */
     @Query("""
                 SELECT r FROM DeviceReport r
                 WHERE r.device = :type
@@ -24,5 +33,9 @@ public interface DeviceReportRepository extends JpaRepository<DeviceReport, Inte
             @Param("type") DeviceType type,
             @Param("workCenterId") Integer workCenterId);
 
-    List<DeviceReport> findAllByOrderByReportingDateDesc(); 
+    /*
+     * Obtiene todos los reportes ordenados de forma descendente por fecha de
+     * reporte.
+     */
+    List<DeviceReport> findAllByOrderByReportingDateDesc();
 }

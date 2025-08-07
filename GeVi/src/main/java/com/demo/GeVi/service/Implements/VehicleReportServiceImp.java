@@ -1,4 +1,4 @@
-package com.demo.GeVi.service;
+package com.demo.GeVi.service.Implements;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -8,6 +8,7 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import com.demo.GeVi.dto.VehicleReportRequestDTO;
 import com.demo.GeVi.dto.VehicleLocalitationDTO;
 import com.demo.GeVi.model.FailType;
@@ -19,7 +20,11 @@ import com.demo.GeVi.model.VehicleReport;
 import com.demo.GeVi.repository.FailTypeRepository;
 import com.demo.GeVi.repository.VehicleReportRepository;
 import com.demo.GeVi.repository.VehicleRepository;
+import com.demo.GeVi.service.VehicleReportService;
 
+/**
+ * Implementación del servicio de reportes de vehículos.
+ */
 @Service
 public class VehicleReportServiceImp implements VehicleReportService {
 
@@ -32,8 +37,10 @@ public class VehicleReportServiceImp implements VehicleReportService {
     @Autowired
     private FailTypeRepository failTypeRepository;
 
+    /**
+     * Registra un nuevo reporte con validaciones y actualiza el vehículo.
+     */
     public void recordReport(VehicleReportRequestDTO request, User user) {
-
         Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado"));
 
@@ -42,7 +49,7 @@ public class VehicleReportServiceImp implements VehicleReportService {
         String personalizedFailure = request.getPersonalizedFailure();
         Ubication locationUnavailable = request.getLocationUnavailable();
 
-        // Validaciones de negocio...
+        // Validaciones de negocio
         if (newStatus == Status.DISPONIBLE) {
             if (failTypeId != null || (personalizedFailure != null && !personalizedFailure.isBlank())) {
                 throw new IllegalArgumentException("No debe registrar una falla cuando el estado es DISPONIBLE.");
@@ -76,51 +83,43 @@ public class VehicleReportServiceImp implements VehicleReportService {
                     .orElseThrow(() -> new IllegalArgumentException("Tipo de falla no válido"));
         }
 
-        List<VehicleReport> lastReports = vehicleReportRepository.findLastReportsWithAnyFail(vehicle.getId());
-        if (!lastReports.isEmpty()) {
-            VehicleReport lastFail = lastReports.get(0);
-            System.out.println("Último reporte con falla: " + lastFail.getReportingDate());
-        }
-
+        // Cierra cronómetro anterior
         Optional<VehicleReport> lastReportOpt = vehicleReportRepository
                 .findTopByVehicleIdOrderByReportingDateDesc(request.getVehicleId());
 
         if (lastReportOpt.isPresent()) {
             VehicleReport lastReport = lastReportOpt.get();
-
-            long elapsed = Duration.between(
-                    lastReport.getReportingDate(),
-                    LocalDateTime.now()).getSeconds();
-
+            long elapsed = Duration.between(lastReport.getReportingDate(), LocalDateTime.now()).getSeconds();
             lastReport.setTimeElapsed(elapsed);
             vehicleReportRepository.save(lastReport);
         }
 
+        // Crear nuevo reporte
         VehicleReport report = new VehicleReport();
         report.setVehicle(vehicle);
-        report.setUser(user); // <- Aquí lo asignas
+        report.setUser(user);
         report.setNewStatus(newStatus);
         report.setFailType(failType);
         report.setPersonalizedFailure(personalizedFailure);
         report.setMileage(request.getMileage());
         report.setLocationUnavailable(locationUnavailable);
-        report.setReportingDate(LocalDateTime.now()); // ✅ Asignar fecha actual
+        report.setReportingDate(LocalDateTime.now());
         report.setTimeElapsed(null);
 
         vehicleReportRepository.save(report);
 
-        // Actualizar el vehículo
+        // Actualizar estado del vehículo
         vehicle.setStatus(newStatus);
         vehicle.setMileage(request.getMileage());
         vehicleRepository.save(vehicle);
     }
 
-    // Obtener último reporte por vehículo con estado INDISPONIBLE y ubicación
-    // TALLER
+    /**
+     * Obtiene últimos reportes en TALLER.
+     */
     @Override
     public List<VehicleLocalitationDTO> getVehiclesInWorkshop() {
         List<VehicleReport> latestReports = vehicleReportRepository.findLatestReportsInWorkshop();
-
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
         return latestReports.stream().map(report -> {
@@ -131,16 +130,16 @@ public class VehicleReportServiceImp implements VehicleReportService {
             dto.setFail(
                     report.getFailType() != null ? report.getFailType().getName() : report.getPersonalizedFailure());
             dto.setReportDate(report.getReportingDate().format(formatter));
-
             return dto;
         }).toList();
     }
 
-    // PATIO
+    /**
+     * Obtiene últimos reportes en PATIO.
+     */
     @Override
     public List<VehicleLocalitationDTO> getVehiclesInYard() {
         List<VehicleReport> latestReports = vehicleReportRepository.findLatestReportsInYard();
-
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
         return latestReports.stream().map(report -> {
@@ -155,8 +154,11 @@ public class VehicleReportServiceImp implements VehicleReportService {
         }).toList();
     }
 
+    /**
+     * Devuelve todos los reportes registrados.
+     */
     @Override
-    public List<VehicleReport> getAllReports(){
+    public List<VehicleReport> getAllReports() {
         return vehicleReportRepository.findAll();
     }
 }

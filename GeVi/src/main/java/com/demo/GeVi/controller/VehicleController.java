@@ -7,16 +7,15 @@ import com.demo.GeVi.repository.VehicleRepository;
 import com.demo.GeVi.service.VehicleExcelService;
 import com.demo.GeVi.service.VehicleReportService;
 import com.demo.GeVi.service.VehicleService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,11 +29,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/vehicles")
-@CrossOrigin(origins = "*") // Permitir solicitudes desde el frontend local
+@CrossOrigin(origins = "*")
 public class VehicleController {
 
     @Autowired
-    private VehicleService service;
+    private VehicleService vehicleService;
 
     @Autowired
     private VehicleRepository vehicleRepository;
@@ -42,10 +41,9 @@ public class VehicleController {
     @Autowired
     private VehicleReportService reportService;
 
-    public VehicleController(VehicleRepository vehicleRepository) {
-        this.vehicleRepository = vehicleRepository;
-    }
-
+    /*
+     * Obtiene lista de vehículos con filtros opcionales.
+     */
     @GetMapping
     public ResponseEntity<List<VehicleDTO>> list(
             @RequestParam(value = "centroTrabajo", required = false) Integer workCenterId,
@@ -53,62 +51,59 @@ public class VehicleController {
             @RequestParam(value = "estado", required = false) String status,
             @RequestParam(value = "propiedad", required = false) String property,
             @RequestParam(value = "busqueda", required = false) String economical) {
-        List<VehicleDTO> result = service.findAll(
-                workCenterId,
-                processId,
-                status,
-                property,
-                economical);
+
+        List<VehicleDTO> result = vehicleService.findAll(
+                workCenterId, processId, status, property, economical);
         return ResponseEntity.ok(result);
     }
 
+    /*
+     * Obtiene las opciones únicas para cada filtro de vehículo.
+     */
     @GetMapping("/filters")
     public ResponseEntity<Map<String, List<Map<String, Object>>>> getFilterOptions() {
-        System.out.println("GET /filters called");
-        return ResponseEntity.ok(service.getFilterOptions());
+        return ResponseEntity.ok(vehicleService.getFilterOptions());
     }
 
-    @PostMapping
-    public ResponseEntity<VehicleDTO> create(@RequestBody VehicleDTO dto) {
-        VehicleDTO created = service.save(dto);
-        return ResponseEntity.ok(created);
-    }
-
+    /*
+     * Actualiza un vehículo existente por su ID.
+     */
     @PutMapping("/{id}")
     public ResponseEntity<VehicleDTO> update(
             @PathVariable Integer id,
             @RequestBody VehicleDTO dto) {
-        VehicleDTO updated = service.update(id, dto);
+        VehicleDTO updated = vehicleService.update(id, dto);
         return ResponseEntity.ok(updated);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        service.delete(id);
-        return ResponseEntity.noContent().build();
-    }
-
+    /*
+     * Búsqueda simple por texto libre (económico o placa).
+     */
     @GetMapping("/search")
     public ResponseEntity<List<VehicleDTO>> searchVehicles(@RequestParam("query") String query) {
-        return ResponseEntity.ok(service.searchVehicles(query));
+        return ResponseEntity.ok(vehicleService.searchVehicles(query));
     }
 
+    /*
+     * Obtiene todos los vehículos sin filtros (uso interno).
+     */
     @GetMapping("/all")
     public List<Vehicle> getAllVehicles() {
         return vehicleRepository.findAll();
     }
 
+    /*
+     * Genera y descarga un archivo Excel con los datos de vehículos
+     */
     @GetMapping("/download")
     public ResponseEntity<byte[]> downloadExcel() {
         try {
-            List<Vehicle> vehicle = service.getAllVehicles();
-            List<VehicleReport> report = reportService.getAllReports();
+            List<Vehicle> vehicles = vehicleService.getAllVehicles();
+            List<VehicleReport> reports = reportService.getAllReports();
 
-            ByteArrayInputStream excel = VehicleExcelService.exportToExcel(vehicle, report);
-
-            // Obtener fecha actual en formato YYYY-MM-DD
-            String date = java.time.LocalDate.now().toString(); 
-            String fileName= "vehiculos_" + date + ".xlsx";
+            ByteArrayInputStream excel = VehicleExcelService.exportToExcel(vehicles, reports);
+            String date = java.time.LocalDate.now().toString();
+            String fileName = "vehiculos_" + date + ".xlsx";
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)

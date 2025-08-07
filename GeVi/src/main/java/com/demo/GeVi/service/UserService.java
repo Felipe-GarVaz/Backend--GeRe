@@ -1,6 +1,5 @@
 package com.demo.GeVi.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -11,9 +10,15 @@ import com.demo.GeVi.repository.UserRepository;
 @Service
 public class UserService implements UserDetailsService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    /*
+     * Carga el usuario por RPE desde la base de datos.
+     */
     @Override
     public UserDetails loadUserByUsername(String rpe) throws UsernameNotFoundException {
         User user = userRepository.findByRpe(rpe)
@@ -24,6 +29,5 @@ public class UserService implements UserDetailsService {
                 .password(user.getPassword())
                 .roles("USER")
                 .build();
-
     }
 }
