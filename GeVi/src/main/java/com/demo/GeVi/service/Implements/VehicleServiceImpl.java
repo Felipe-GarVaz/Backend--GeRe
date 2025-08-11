@@ -209,6 +209,47 @@ public class VehicleServiceImpl implements VehicleService {
         return vehicleRepository.save(v);
     }
 
+    /**
+     * Devuelve 1 vehículo por económico o placa (coincidencia exacta,
+     * case-insensitive).
+     * Útil si quieres precargar el preview de forma determinística.
+     */
+    @Override
+    public VehicleDTO getOneByEconomicalOrBadge(String query) {
+        if (query == null || query.isBlank()) {
+            throw new ResourceNotFoundException("Vehicle", "query", null);
+        }
+        String q = query.trim();
+
+        Vehicle v = vehicleRepository.findByEconomicalIgnoreCase(q)
+                .or(() -> vehicleRepository.findByBadgeIgnoreCase(q))
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "economicalOrBadge", q));
+
+        return fromEntity(v);
+    }
+
+    /**
+     * Elimina un vehículo por número económico (case-insensitive).
+     */
+    @Transactional
+    @Override
+    public void deleteByEconomical(String economical) {
+        if (economical == null || economical.isBlank()) {
+            throw new IllegalArgumentException("El número económico es requerido");
+        }
+        String eco = economical.trim();
+
+        // Verificación + 404 coherente con el resto del proyecto
+        Vehicle v = vehicleRepository.findByEconomicalIgnoreCase(eco)
+                .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "economical", eco));
+
+        // Si necesitas validaciones previas (p. ej. que no tenga reportes abiertos),
+        // hazlo aquí.
+
+        // Borrado por derived query (evita reconsultar por id)
+        vehicleRepository.deleteByEconomical(v.getEconomical());
+    }
+
     // ===== Métodos auxiliares =====
 
     private VehicleDTO fromEntity(Vehicle v) {

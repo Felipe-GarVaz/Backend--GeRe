@@ -1,6 +1,7 @@
 package com.demo.GeVi.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -43,4 +44,10 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Integer>, JpaS
     boolean existsByEconomical(String economical);
 
     boolean existsByBadge(String badge);
+
+    void deleteByEconomical(String economical);
+
+    // ===== NUEVO: búsquedas exactas (para seleccionar / eliminar) =====
+    Optional<Vehicle> findByEconomicalIgnoreCase(String economical);
+    Optional<Vehicle> findByBadgeIgnoreCase(String badge);
 }

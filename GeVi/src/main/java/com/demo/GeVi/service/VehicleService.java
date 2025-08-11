@@ -44,4 +44,8 @@ public interface VehicleService {
     List<Vehicle> getAllVehicles();
 
     Vehicle saveVehicle(VehicleRequest request);
+
+    VehicleDTO getOneByEconomicalOrBadge(String query);
+
+    void deleteByEconomical(String economical);
 }

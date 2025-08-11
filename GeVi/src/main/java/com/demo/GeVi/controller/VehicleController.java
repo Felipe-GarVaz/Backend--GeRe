@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -127,5 +128,19 @@ public class VehicleController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    // ===== NUEVO: obtener uno por económico O placa exacto (opcional para tu
+    // front) =====
+    @GetMapping("/economical-or-badge")
+    public ResponseEntity<VehicleDTO> getOneByEconomicalOrBadge(@RequestParam String query) {
+        return ResponseEntity.ok(vehicleService.getOneByEconomicalOrBadge(query));
+    }
+
+    // ===== NUEVO: eliminar por número económico =====
+    @DeleteMapping("/economical/{economical}")
+    public ResponseEntity<Void> deleteByEconomical(@PathVariable String economical) {
+        vehicleService.deleteByEconomical(economical);
+        return ResponseEntity.noContent().build();
     }
 }
