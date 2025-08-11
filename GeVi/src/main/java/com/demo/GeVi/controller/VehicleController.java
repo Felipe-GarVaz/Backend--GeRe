@@ -1,12 +1,15 @@
 package com.demo.GeVi.controller;
 
 import com.demo.GeVi.dto.VehicleDTO;
+import com.demo.GeVi.dto.VehicleRequest;
 import com.demo.GeVi.model.Vehicle;
 import com.demo.GeVi.model.VehicleReport;
 import com.demo.GeVi.repository.VehicleRepository;
 import com.demo.GeVi.service.VehicleExcelService;
 import com.demo.GeVi.service.VehicleReportService;
 import com.demo.GeVi.service.VehicleService;
+
+import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -16,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -112,6 +116,16 @@ public class VehicleController {
 
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createVehicle(@Valid @RequestBody VehicleRequest request) {
+        try {
+            Vehicle saved = vehicleService.saveVehicle(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }

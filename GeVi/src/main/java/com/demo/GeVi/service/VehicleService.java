@@ -3,6 +3,7 @@ package com.demo.GeVi.service;
 import java.util.List;
 import java.util.Map;
 import com.demo.GeVi.dto.VehicleDTO;
+import com.demo.GeVi.dto.VehicleRequest;
 import com.demo.GeVi.model.Vehicle;
 
 public interface VehicleService {
@@ -41,4 +42,6 @@ public interface VehicleService {
      * Retorna todos los vehículos sin filtros.
      */
     List<Vehicle> getAllVehicles();
+
+    Vehicle saveVehicle(VehicleRequest request);
 }

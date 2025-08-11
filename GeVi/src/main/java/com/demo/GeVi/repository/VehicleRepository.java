@@ -39,4 +39,8 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Integer>, JpaS
      */
     @Query("SELECT v FROM Vehicle v WHERE LOWER(v.economical) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(v.badge) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<Vehicle> searchByEconomicalOrBadge(String query);
+
+    boolean existsByEconomical(String economical);
+
+    boolean existsByBadge(String badge);
 }

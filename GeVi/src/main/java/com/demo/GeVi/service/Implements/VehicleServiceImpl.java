@@ -1,6 +1,7 @@
 package com.demo.GeVi.service.Implements;
 
 import com.demo.GeVi.dto.VehicleDTO;
+import com.demo.GeVi.dto.VehicleRequest;
 import com.demo.GeVi.exception.ResourceNotFoundException;
 import com.demo.GeVi.model.Process;
 import com.demo.GeVi.model.Property;
@@ -17,11 +18,13 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import jakarta.persistence.criteria.Predicate;
 
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -43,10 +46,12 @@ public class VehicleServiceImpl implements VehicleService {
     private EntityManager entityManager;
 
     /**
-     * Filtra vehículos dinámicamente por centro, proceso, estado, propiedad o económico.
+     * Filtra vehículos dinámicamente por centro, proceso, estado, propiedad o
+     * económico.
      */
     @Override
-    public List<VehicleDTO> findAll(Integer workCenterId, Integer processId, String status, String property, String economical) {
+    public List<VehicleDTO> findAll(Integer workCenterId, Integer processId, String status, String property,
+            String economical) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Vehicle> query = cb.createQuery(Vehicle.class);
         Root<Vehicle> root = query.from(Vehicle.class);
@@ -167,6 +172,41 @@ public class VehicleServiceImpl implements VehicleService {
     @Override
     public List<Vehicle> getAllVehicles() {
         return vehicleRepository.findAll();
+    }
+
+    @Transactional
+    @Override
+    public Vehicle saveVehicle(VehicleRequest request) {
+        // Validaciones de unicidad
+        if (vehicleRepository.existsByEconomical(request.getEconomical())) {
+            throw new IllegalArgumentException("El número económico ya existe");
+        }
+        if (vehicleRepository.existsByBadge(request.getBadge())) {
+            throw new IllegalArgumentException("La placa ya existe");
+        }
+
+        // FK: WorkCenter y Process
+        WorkCenter wc = workCenterRepository.findById(request.getWorkCenter())
+                .orElseThrow(() -> new ResourceNotFoundException("WorkCenter", "id", request.getWorkCenter()));
+
+        Process pr = processRepository.findById(request.getProcess())
+                .orElseThrow(() -> new ResourceNotFoundException("Process", "id", request.getProcess()));
+
+        // Mapear DTO -> Entity
+        Vehicle v = new Vehicle();
+        v.setEconomical(request.getEconomical());
+        v.setBadge(request.getBadge());
+        v.setProperty(Property.valueOf(request.getProperty().toUpperCase()));
+        v.setMileage(request.getMileage());
+        v.setBrand(request.getBrand());
+        v.setModel(request.getModel());
+        v.setYear(Year.of(request.getYear()));
+        v.setWorkCenter(wc);
+        v.setProcess(pr);
+
+        v.setStatus(Status.DISPONIBLE);
+
+        return vehicleRepository.save(v);
     }
 
     // ===== Métodos auxiliares =====
