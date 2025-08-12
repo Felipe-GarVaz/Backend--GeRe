@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -19,7 +20,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.demo.GeVi.security.JwtAuthFilter;
 import com.demo.GeVi.security.JwtUtil;
-import com.demo.GeVi.service.UserService;
 
 @Configuration
 public class SecurityConfig {
@@ -28,25 +28,38 @@ public class SecurityConfig {
      * Filtro personalizado para validar JWT
      */
     @Bean
-    public JwtAuthFilter jwtAuthFilter(JwtUtil jwtUtil, UserService userService) {
-        return new JwtAuthFilter(jwtUtil, userService);
+    public JwtAuthFilter jwtAuthFilter(JwtUtil jwtUtil) {
+        return new JwtAuthFilter(jwtUtil);
     }
 
     /*
      * Configuración principal de la cadena de seguridad
      */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
+ public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
-                .cors(Customizer.withDefaults()) // Habilita CORS con configuración por defecto
-                .csrf(csrf -> csrf.disable()) // Desactiva CSRF ya que se usa JWT
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll() // Permitir acceso público a rutas de autenticación
-                        .requestMatchers("/api/**").authenticated() // Proteger rutas de la API
-                        .anyRequest().authenticated()) // Toda otra ruta requiere autenticación
-                .sessionManagement(sess -> sess
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // No se mantiene sesión en el servidor
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .cors(Customizer.withDefaults())
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                // Preflight CORS
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                // Auth público
+                .requestMatchers("/auth/**").permitAll()
+
+                // Endpoints protegidos por rol
+                .requestMatchers(HttpMethod.POST,   "/api/vehicles/**").hasRole("ADMIN")   // crear
+                .requestMatchers(HttpMethod.PUT,    "/api/vehicles/**").hasRole("ADMIN")   // editar (si aplica)
+                .requestMatchers(HttpMethod.DELETE, "/api/vehicles/**").hasRole("ADMIN")   // eliminar
+
+                // Resto del API requiere estar autenticado
+                .requestMatchers("/api/**").authenticated()
+
+                // Cualquier otra ruta (si tienes estáticos, docs, etc.)
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -81,6 +94,7 @@ public class SecurityConfig {
                 "http://192.168.1.64:3000"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true); // Permite el uso de cookies o tokens con CORS
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

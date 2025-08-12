@@ -1,5 +1,7 @@
 package com.demo.GeVi.dto;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,4 +17,5 @@ public class LoginResponseDTO {
 
     private String token;
     private String name;
+    private List<String> roles;
 }

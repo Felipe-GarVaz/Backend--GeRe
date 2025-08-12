@@ -6,6 +6,8 @@ import com.demo.GeVi.model.User;
 import com.demo.GeVi.repository.UserRepository;
 import com.demo.GeVi.security.JwtUtil;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -34,24 +36,22 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO loginRequest) {
-
-        // Autenticación de credenciales del usuario
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getRpe(),
-                        loginRequest.getPassword()));
+                new UsernamePasswordAuthenticationToken(loginRequest.getRpe(), loginRequest.getPassword()));
 
-        String token = jwtUtil.generateToken(loginRequest.getRpe());
-
-        // Buscar al usuario en la base de datos por RPE
         User user = userRepository.findByRpe(loginRequest.getRpe())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // Retornar token y nombre completo
-        LoginResponseDTO response = new LoginResponseDTO(
-                token,
-                user.getName() + " " + user.getLastName());
+        // Convierte tus entidades Rol a strings: "ADMIN", "USER"
+        List<String> roles = user.getRoles().stream()
+                .map(r -> r.getName()) // ajusta al nombre de tu campo
+                .toList();
 
+        // genera token con claim "roles"
+        String token = jwtUtil.generateTokenWithRoles(user.getRpe(), roles);
+
+        LoginResponseDTO response = new LoginResponseDTO(token, user.getName() + " " + user.getLastName(), roles);
         return ResponseEntity.ok(response);
     }
+
 }

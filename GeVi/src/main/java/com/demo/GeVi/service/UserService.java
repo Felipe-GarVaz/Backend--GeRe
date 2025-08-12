@@ -1,10 +1,10 @@
 package com.demo.GeVi.service;
 
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-import com.demo.GeVi.model.User;
 import com.demo.GeVi.repository.UserRepository;
 
 @Service
@@ -21,13 +21,17 @@ public class UserService implements UserDetailsService {
      */
     @Override
     public UserDetails loadUserByUsername(String rpe) throws UsernameNotFoundException {
-        User user = userRepository.findByRpe(rpe)
+        var user = userRepository.findByRpe(rpe)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con RPE: " + rpe));
+
+        var authorities = user.getRoles().stream()
+                .map(r -> new SimpleGrantedAuthority("ROLE_" + r.getName())) // ADMIN, USER
+                .toList();
 
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getRpe())
                 .password(user.getPassword())
-                .roles("USER")
+                .authorities(authorities)
                 .build();
     }
 }

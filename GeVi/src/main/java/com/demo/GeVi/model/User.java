@@ -1,10 +1,17 @@
 package com.demo.GeVi.model;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,7 +32,7 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Integer id;
-    
+
     @Column(name = "rpe", nullable = false, unique = true)
     private String rpe;
 
@@ -37,5 +44,11 @@ public class User {
 
     @Column(name = "contrasenia", nullable = false)
     private String password;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "usuarioRol", joinColumns = 
+    @JoinColumn(name = "usuarioId"), inverseJoinColumns = 
+    @JoinColumn(name = "rolId"))
+    private Set<Role> roles = new HashSet<>();
 
 }
