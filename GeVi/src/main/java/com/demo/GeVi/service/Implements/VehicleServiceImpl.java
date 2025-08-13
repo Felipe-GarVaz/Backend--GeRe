@@ -239,17 +239,14 @@ public class VehicleServiceImpl implements VehicleService {
         }
         String eco = economical.trim();
 
-        // Verificación + 404 coherente con el resto del proyecto
         Vehicle v = vehicleRepository.findByEconomicalIgnoreCase(eco)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle", "economical", eco));
 
-        // Si necesitas validaciones previas (p. ej. que no tenga reportes abiertos),
-        // hazlo aquí.
+        // (opcional) validaciones de negocio previas aquí
 
-        // Borrado por derived query (evita reconsultar por id)
-        vehicleRepository.deleteByEconomical(v.getEconomical());
+        vehicleRepository.delete(v);
+        // alternativamente: vehicleRepository.deleteById(v.getId());
     }
-
     // ===== Métodos auxiliares =====
 
     private VehicleDTO fromEntity(Vehicle v) {

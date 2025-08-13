@@ -1,10 +1,15 @@
 package com.demo.GeVi.model;
 
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -30,8 +35,9 @@ public class VehicleReport {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "vehiculoId", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Vehicle vehicle;
 
     @ManyToOne
@@ -61,5 +67,7 @@ public class VehicleReport {
 
     @Column(name = "tiempoTranscurrido")
     private Long timeElapsed;
+
+    
 
 }
