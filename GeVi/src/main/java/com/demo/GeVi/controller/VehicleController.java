@@ -51,11 +51,11 @@ public class VehicleController {
      */
     @GetMapping
     public ResponseEntity<List<VehicleDTO>> list(
-            @RequestParam(value = "centroTrabajo", required = false) Integer workCenterId,
-            @RequestParam(value = "proceso", required = false) Integer processId,
-            @RequestParam(value = "estado", required = false) String status,
-            @RequestParam(value = "propiedad", required = false) String property,
-            @RequestParam(value = "busqueda", required = false) String economical) {
+            @RequestParam(value = "workCenter", required = false) Integer workCenterId,
+            @RequestParam(value = "process", required = false) Integer processId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String property,
+            @RequestParam(value = "search", required = false) String economical) {
 
         List<VehicleDTO> result = vehicleService.findAll(
                 workCenterId, processId, status, property, economical);
@@ -85,7 +85,7 @@ public class VehicleController {
      * Búsqueda simple por texto libre (económico o placa).
      */
     @GetMapping("/search")
-    public ResponseEntity<List<VehicleDTO>> searchVehicles(@RequestParam("query") String query) {
+    public ResponseEntity<List<VehicleDTO>> searchVehicles(@RequestParam String query) {
         return ResponseEntity.ok(vehicleService.searchVehicles(query));
     }
 

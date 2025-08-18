@@ -149,10 +149,10 @@ public class VehicleServiceImpl implements VehicleService {
         }).collect(Collectors.toList());
 
         Map<String, List<Map<String, Object>>> options = new HashMap<>();
-        options.put("centroTrabajo", workCenters);
-        options.put("proceso", processes);
-        options.put("estado", statuses);
-        options.put("propiedad", properties);
+        options.put("workCenter", workCenters);
+        options.put("process", processes);
+        options.put("status", statuses);
+        options.put("property", properties);
 
         return options;
     }
