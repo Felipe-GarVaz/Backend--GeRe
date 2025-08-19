@@ -13,4 +13,8 @@ public interface DeviceService {
     List<DeviceDTO> getDeviceByWorkCenter();
 
     Device saveDevice(DeviceRequestDTO request);
+
+    List<Device> searchBySerial(String query);
+
+    void deleteBySerial(String serialNumber);
 }

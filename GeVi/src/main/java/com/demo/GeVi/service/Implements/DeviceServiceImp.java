@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.demo.GeVi.dto.DeviceDTO;
 import com.demo.GeVi.dto.DeviceDamagedDTO;
 import com.demo.GeVi.dto.DeviceRequestDTO;
+import com.demo.GeVi.exception.ResourceNotFoundException;
 import com.demo.GeVi.model.Device;
 import com.demo.GeVi.model.DeviceReport;
 import com.demo.GeVi.model.WorkCenter;
@@ -133,5 +134,25 @@ public class DeviceServiceImp implements DeviceService {
         entity.setWorkCenter(wc);
 
         return deviceRepository.save(entity);
+    }
+
+    @Override
+    public List<Device> searchBySerial(String query) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        return deviceRepository.searchBySerial(query);
+    }
+
+    @Override
+    @Transactional
+    public void deleteBySerial(String serialNumber) {
+        Device device = deviceRepository.findBySerialNumberIgnoreCase(serialNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Device", "serialNumber", serialNumber));
+
+        try {
+            deviceRepository.delete(device);
+        } catch (DataIntegrityViolationException ex) {
+        }
     }
 }

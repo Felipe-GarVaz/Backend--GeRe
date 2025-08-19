@@ -22,7 +22,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,6 +49,17 @@ public class DeviceController {
     public ResponseEntity<Device> create(@Valid @RequestBody DeviceRequestDTO request) {
         Device saved = deviceService.saveDevice(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Device>> search(@RequestParam String query) {
+        return ResponseEntity.ok(deviceService.searchBySerial(query));
+    }
+
+    @DeleteMapping("/serial/{serial}")
+    public ResponseEntity<Void> deleteBySerial(@PathVariable String serial) {
+        deviceService.deleteBySerial(serial);
+        return ResponseEntity.noContent().build();
     }
 
     /*
