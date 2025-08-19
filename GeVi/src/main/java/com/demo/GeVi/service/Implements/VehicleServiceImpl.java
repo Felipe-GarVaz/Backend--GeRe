@@ -1,7 +1,7 @@
 package com.demo.GeVi.service.Implements;
 
 import com.demo.GeVi.dto.VehicleDTO;
-import com.demo.GeVi.dto.VehicleRequest;
+import com.demo.GeVi.dto.VehicleRequestDTO;
 import com.demo.GeVi.exception.ResourceNotFoundException;
 import com.demo.GeVi.model.Process;
 import com.demo.GeVi.model.Property;
@@ -176,7 +176,7 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Transactional
     @Override
-    public Vehicle saveVehicle(VehicleRequest request) {
+    public Vehicle saveVehicle(VehicleRequestDTO request) {
         // Validaciones de unicidad
         if (vehicleRepository.existsByEconomical(request.getEconomical())) {
             throw new IllegalArgumentException("El número económico ya existe");
@@ -186,11 +186,11 @@ public class VehicleServiceImpl implements VehicleService {
         }
 
         // FK: WorkCenter y Process
-        WorkCenter wc = workCenterRepository.findById(request.getWorkCenter())
-                .orElseThrow(() -> new ResourceNotFoundException("WorkCenter", "id", request.getWorkCenter()));
+        WorkCenter wc = workCenterRepository.findById(request.getWorkCenterId())
+                .orElseThrow(() -> new ResourceNotFoundException("WorkCenter", "id", request.getWorkCenterId()));
 
-        Process pr = processRepository.findById(request.getProcess())
-                .orElseThrow(() -> new ResourceNotFoundException("Process", "id", request.getProcess()));
+        Process pr = processRepository.findById(request.getProcessId())
+                .orElseThrow(() -> new ResourceNotFoundException("Process", "id", request.getProcessId()));
 
         // Mapear DTO -> Entity
         Vehicle v = new Vehicle();

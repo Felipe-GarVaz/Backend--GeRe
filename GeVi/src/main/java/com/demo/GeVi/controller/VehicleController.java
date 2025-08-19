@@ -1,7 +1,7 @@
 package com.demo.GeVi.controller;
 
 import com.demo.GeVi.dto.VehicleDTO;
-import com.demo.GeVi.dto.VehicleRequest;
+import com.demo.GeVi.dto.VehicleRequestDTO;
 import com.demo.GeVi.model.Vehicle;
 import com.demo.GeVi.model.VehicleReport;
 import com.demo.GeVi.repository.VehicleRepository;
@@ -121,7 +121,7 @@ public class VehicleController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createVehicle(@Valid @RequestBody VehicleRequest request) {
+    public ResponseEntity<?> createVehicle(@Valid @RequestBody VehicleRequestDTO request) {
         try {
             Vehicle saved = vehicleService.saveVehicle(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(saved);

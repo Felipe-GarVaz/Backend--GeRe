@@ -3,7 +3,7 @@ package com.demo.GeVi.service;
 import java.util.List;
 import java.util.Map;
 import com.demo.GeVi.dto.VehicleDTO;
-import com.demo.GeVi.dto.VehicleRequest;
+import com.demo.GeVi.dto.VehicleRequestDTO;
 import com.demo.GeVi.model.Vehicle;
 
 public interface VehicleService {
@@ -43,7 +43,7 @@ public interface VehicleService {
      */
     List<Vehicle> getAllVehicles();
 
-    Vehicle saveVehicle(VehicleRequest request);
+    Vehicle saveVehicle(VehicleRequestDTO request);
 
     VehicleDTO getOneByEconomicalOrBadge(String query);
 

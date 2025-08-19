@@ -1,14 +1,12 @@
 package com.demo.GeVi.dto;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class VehicleRequest {
+public class VehicleRequestDTO {
 
     @NotBlank
     private String economical;
@@ -33,10 +31,8 @@ public class VehicleRequest {
     private Integer year;
 
     @NotNull
-    @JsonAlias({ "workCenterId" })
-    private Integer workCenter;
+    private Integer workCenterId;
 
     @NotNull
-    @JsonAlias({ "processId" }) 
-    private Integer process;
+    private Integer processId;
 }

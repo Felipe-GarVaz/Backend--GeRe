@@ -5,9 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import com.demo.GeVi.dto.DeviceDTO;
 import com.demo.GeVi.dto.DeviceDamagedDTO;
+import com.demo.GeVi.dto.DeviceRequestDTO;
 import com.demo.GeVi.model.Device;
 import com.demo.GeVi.model.DeviceReport;
 import com.demo.GeVi.model.WorkCenter;
@@ -16,6 +18,8 @@ import com.demo.GeVi.repository.DeviceReportRepository;
 import com.demo.GeVi.repository.DeviceRepository;
 import com.demo.GeVi.repository.WorkCenterRepository;
 import com.demo.GeVi.service.DeviceService;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class DeviceServiceImp implements DeviceService {
@@ -98,5 +102,36 @@ public class DeviceServiceImp implements DeviceService {
                     fail,
                     date);
         }).toList();
+    }
+
+    @Transactional
+    @Override
+    public Device saveDevice(DeviceRequestDTO request) {
+        // Normaliza a MAYÚSCULAS, sin espacios extremos
+        String serial = request.getSerialNumber().trim().toUpperCase();
+
+        // Validación rápida de patrón (opcional; ya puedes validarlo en el DTO también)
+        if (!serial.matches("^[A-Z0-9-]{3,50}$")) {
+            throw new IllegalArgumentException("El número de serie debe usar MAYÚSCULAS, números o guiones (3-50).");
+        }
+
+        // Evitar duplicados (además de la unique constraint)
+        if (deviceRepository.existsBySerialNumber(serial)) {
+            throw new DataIntegrityViolationException("Duplicado serial");
+        }
+
+        WorkCenter wc = workCenterRepository.findById(request.getWorkCenterId())
+                .orElseThrow(() -> new RuntimeException(
+                        "WorkCenter no encontrado: id = " + request.getWorkCenterId()));
+
+        DeviceStatus status = (request.getStatus() != null) ? request.getStatus() : DeviceStatus.ACTIVO;
+
+        Device entity = new Device();
+        entity.setSerialNumber(serial);
+        entity.setDeviceType(request.getDeviceType());
+        entity.setStatus(status);
+        entity.setWorkCenter(wc);
+
+        return deviceRepository.save(entity);
     }
 }

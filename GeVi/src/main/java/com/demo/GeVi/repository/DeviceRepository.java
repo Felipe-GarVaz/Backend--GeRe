@@ -17,6 +17,8 @@ public interface DeviceRepository extends JpaRepository<Device, Integer> {
      */
     Optional<Device> findBySerialNumber(String serialNumber);
 
+    boolean existsBySerialNumber(String serialNumber);
+
     /*
      * Lista dispositivos por centro de trabajo
      */

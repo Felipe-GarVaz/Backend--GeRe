@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.demo.GeVi.dto.DeviceDTO;
+import com.demo.GeVi.dto.DeviceRequestDTO;
 import com.demo.GeVi.model.Device;
 import com.demo.GeVi.model.DeviceReport;
 import com.demo.GeVi.model.DeviceType;
@@ -13,6 +14,8 @@ import com.demo.GeVi.repository.DeviceRepository;
 import com.demo.GeVi.service.DeviceExcelService;
 import com.demo.GeVi.service.DeviceService;
 
+import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -20,6 +23,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -37,6 +42,12 @@ public class DeviceController {
 
     @Autowired
     private DeviceReportRepository deviceReportRepository;
+
+    @PostMapping
+    public ResponseEntity<Device> create(@Valid @RequestBody DeviceRequestDTO request) {
+        Device saved = deviceService.saveDevice(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
 
     /*
      * Obtiene lista de dispositivos agrupados por centro de trabajo.
