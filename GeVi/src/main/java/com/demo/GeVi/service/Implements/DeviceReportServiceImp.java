@@ -7,10 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.demo.GeVi.dto.DeviceReportRequestDTO;
+import com.demo.GeVi.exception.ResourceNotFoundException;
 import com.demo.GeVi.model.Device;
 import com.demo.GeVi.model.Device.DeviceStatus;
 import com.demo.GeVi.model.DeviceReport;
-import com.demo.GeVi.model.DeviceType;
 import com.demo.GeVi.model.FailTypeDevice;
 import com.demo.GeVi.model.WorkCenter;
 import com.demo.GeVi.repository.DeviceReportRepository;
@@ -18,6 +18,8 @@ import com.demo.GeVi.repository.DeviceRepository;
 import com.demo.GeVi.repository.FailTypeDeviceRepository;
 import com.demo.GeVi.repository.WorkCenterRepository;
 import com.demo.GeVi.service.DeviceReportService;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class DeviceReportServiceImp implements DeviceReportService {
@@ -29,44 +31,57 @@ public class DeviceReportServiceImp implements DeviceReportService {
     private DeviceRepository deviceRepository;
 
     @Autowired
-    private WorkCenterRepository WorkCenterRepository;
+    private WorkCenterRepository workCenterRepository;
 
     @Autowired
     private FailTypeDeviceRepository failTypeDeviceRepository;
 
     @Override
+    @Transactional
     public DeviceReport recordReport(DeviceReportRequestDTO request) {
-        Device device = deviceRepository.findBySerialNumber(request.getSerialNumber())
-                .orElseThrow(() -> new RuntimeException("Dispositivo no encontrado"));
+        // Sanitiza entradas
+        String serial = request.getSerialNumber() == null ? null : request.getSerialNumber().trim();
 
-        WorkCenter workCenter = WorkCenterRepository.findById(request.getWorkCenterId())
-                .orElseThrow(() -> new RuntimeException("Centro de trabajo no encontrado"));
+        Device device = deviceRepository.findBySerialNumber(serial)
+                .orElseThrow(() -> new ResourceNotFoundException("Device", "serialNumber", serial));
 
-        FailTypeDevice failTypeDevice = null;
-        if (request.getFailTypeDeviceId() != null && !"otros".equalsIgnoreCase(request.getPersonalizedFailure())) {
-            failTypeDevice = failTypeDeviceRepository.findById(request.getFailTypeDeviceId())
-                    .orElseThrow(() -> new RuntimeException("Tipo de falla no encontrado"));
-        }
+        WorkCenter workCenter = workCenterRepository.findById(request.getWorkCenterId())
+                .orElseThrow(() -> new ResourceNotFoundException("WorkCenter", "id", request.getWorkCenterId()));
 
-        // Si se desea reactivar el dispositivo
+        // Si se desea reactivar el dispositivo: NO crear reporte
         if ("ACTIVO".equalsIgnoreCase(request.getNewStatus())) {
             device.setStatus(DeviceStatus.ACTIVO);
+            // No necesitas save explícito si está manejado, pero lo dejamos claro
             deviceRepository.save(device);
-            return null; // No se registra reporte en este caso
+            return null; // -> controller devolverá 204
         }
 
-        // Registrar nuevo reporte y marcar como DEFECTUOSO
+        // Validar causa de falla: failType o personalizada (al menos una)
+        FailTypeDevice failTypeDevice = null;
+        String personalized = request.getPersonalizedFailure();
+        boolean hasPersonalized = personalized != null && !personalized.isBlank();
+
+        if (request.getFailTypeDeviceId() != null) {
+            failTypeDevice = failTypeDeviceRepository.findById(request.getFailTypeDeviceId())
+                    .orElseThrow(
+                            () -> new ResourceNotFoundException("FailTypeDevice", "id", request.getFailTypeDeviceId()));
+        }
+
+        // Construir y persistir reporte
         DeviceReport report = new DeviceReport();
-        report.setDevice(DeviceType.valueOf(request.getDeviceType()));
+        report.setDevice(device); // ⚠️ llena la FK (dispositivoId)
         report.setWorkCenter(workCenter);
+        report.setDeviceType(device.getDeviceType()); // usa el del Device para consistencia
         report.setFailTypeDevice(failTypeDevice);
-        report.setPersonalizedFailure(request.getPersonalizedFailure());
+        report.setPersonalizedFailure(hasPersonalized ? personalized.trim() : null);
         report.setReportingDate(LocalDateTime.now());
 
+        // Marcar como DEFECTUOSO
         device.setStatus(DeviceStatus.DEFECTUOSO);
-        deviceRepository.save(device);
+        // deviceRepository.save(device); // innecesario si el contexto hace
+        // flush/commit; deja si prefieres explícito
 
-        return deviceReportRepository.save(report);
+        return deviceReportRepository.save(report); // devuelve entidad con ID
     }
 
     @Override

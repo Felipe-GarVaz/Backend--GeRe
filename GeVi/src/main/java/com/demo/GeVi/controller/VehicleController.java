@@ -130,14 +130,13 @@ public class VehicleController {
         }
     }
 
-    // ===== NUEVO: obtener uno por económico O placa exacto (opcional para tu
-    // front) =====
+    // obtener uno por económico O placa exacto 
     @GetMapping("/economical-or-badge")
     public ResponseEntity<VehicleDTO> getOneByEconomicalOrBadge(@RequestParam String query) {
         return ResponseEntity.ok(vehicleService.getOneByEconomicalOrBadge(query));
     }
 
-    // ===== NUEVO: eliminar por número económico =====
+    // eliminar por número económico 
     @DeleteMapping("/economical/{economical}")
     public ResponseEntity<Void> deleteByEconomical(@PathVariable String economical) {
         vehicleService.deleteByEconomical(economical);

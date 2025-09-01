@@ -3,51 +3,61 @@ package com.demo.GeVi.service.Implements;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.demo.GeVi.dto.DeviceDTO;
 import com.demo.GeVi.dto.DeviceDamagedDTO;
 import com.demo.GeVi.dto.DeviceRequestDTO;
+import com.demo.GeVi.dto.DeviceResponseDTO;
 import com.demo.GeVi.exception.ResourceNotFoundException;
 import com.demo.GeVi.model.Device;
 import com.demo.GeVi.model.DeviceReport;
+import com.demo.GeVi.model.DeviceType;
 import com.demo.GeVi.model.WorkCenter;
 import com.demo.GeVi.model.Device.DeviceStatus;
 import com.demo.GeVi.repository.DeviceReportRepository;
 import com.demo.GeVi.repository.DeviceRepository;
 import com.demo.GeVi.repository.WorkCenterRepository;
 import com.demo.GeVi.service.DeviceService;
-
-import jakarta.transaction.Transactional;
+import com.demo.GeVi.service.DeviceExcelService;
 
 @Service
 public class DeviceServiceImp implements DeviceService {
 
-    @Autowired
-    private WorkCenterRepository workCenterRepository;
+    private final WorkCenterRepository workCenterRepository;
+    private final DeviceRepository deviceRepository;
+    private final DeviceReportRepository deviceReportRepository;
+    private final DeviceExcelService deviceExcelService;
 
-    @Autowired
-    private DeviceRepository deviceRepository;
-
-    @Autowired
-    private DeviceReportRepository deviceReportRepository;
+    public DeviceServiceImp(
+            WorkCenterRepository workCenterRepository,
+            DeviceRepository deviceRepository,
+            DeviceReportRepository deviceReportRepository,
+            DeviceExcelService deviceExcelService) {
+        this.workCenterRepository = workCenterRepository;
+        this.deviceRepository = deviceRepository;
+        this.deviceReportRepository = deviceReportRepository;
+        this.deviceExcelService = deviceExcelService;
+    }
 
     @Override
     public List<DeviceDTO> getDeviceByWorkCenter() {
         List<WorkCenter> workCenters = workCenterRepository.findAll();
-        List<Device> device = deviceRepository.findAll();
+        List<Device> devices = deviceRepository.findAll();
         List<DeviceDTO> dtoList = new ArrayList<>();
 
         for (WorkCenter workCenter : workCenters) {
             DeviceDTO dto = new DeviceDTO();
             dto.setWorkCenter(workCenter.getName());
 
-            for (Device d : device) {
-                if (d.getWorkCenter().getId().equals(workCenter.getId())) {
+            for (Device d : devices) {
+                if (d.getWorkCenter() != null && d.getWorkCenter().getId().equals(workCenter.getId())) {
                     String type = d.getDeviceType().name();
-                    boolean defective = d.getStatus().equals(Device.DeviceStatus.DEFECTUOSO);
+                    boolean defective = d.getStatus() == DeviceStatus.DEFECTUOSO;
 
                     switch (type) {
                         case "TP_NEWLAND" -> {
@@ -70,6 +80,8 @@ public class DeviceServiceImp implements DeviceService {
                             if (defective)
                                 dto.setReaderDolphin9900Damaged(dto.getReaderDolphin9900Damaged() + 1);
                         }
+                        default -> {
+                            /* no-op */ }
                     }
                 }
             }
@@ -80,21 +92,23 @@ public class DeviceServiceImp implements DeviceService {
         return dtoList;
     }
 
+    @Override
     public List<DeviceDamagedDTO> getDeviceDamaged() {
-        List<Device> damaged = deviceRepository.findByStatus(DeviceStatus.DEFECTUOSO);
+        List<Device> damaged = deviceRepository.findAllByStatusFetchWorkCenter(DeviceStatus.DEFECTUOSO);
 
         return damaged.stream().map(device -> {
-            List<DeviceReport> report = deviceReportRepository.findLastReportsByTypeAndWorkCenter(
-                    device.getDeviceType(),
-                    device.getWorkCenter().getId());
+            // buscar último reporte por dispositivo
+            Optional<DeviceReport> lastOpt = deviceReportRepository
+                    .findTopByDeviceIdOrderByReportingDateDesc(device.getId());
 
-            DeviceReport lastReport = report.isEmpty() ? null : report.get(0);
-            String fail = (lastReport != null)
-                    ? (lastReport.getFailTypeDevice() != null ? lastReport.getFailTypeDevice().getName()
-                            : lastReport.getPersonalizedFailure())
-                    : "Sin información";
+            String fail = lastOpt
+                    .map(dr -> dr.getFailTypeDevice() != null
+                            ? dr.getFailTypeDevice().getName()
+                            : dr.getPersonalizedFailure())
+                    .filter(s -> s != null && !s.isBlank())
+                    .orElse("Sin información");
 
-            LocalDateTime date = (lastReport != null) ? lastReport.getReportingDate() : null;
+            LocalDateTime date = lastOpt.map(DeviceReport::getReportingDate).orElse(null);
 
             return new DeviceDamagedDTO(
                     device.getDeviceType().name(),
@@ -105,25 +119,23 @@ public class DeviceServiceImp implements DeviceService {
         }).toList();
     }
 
-    @Transactional
+    /* ===================== Crear ===================== */
     @Override
-    public Device saveDevice(DeviceRequestDTO request) {
-        // Normaliza a MAYÚSCULAS, sin espacios extremos
+    @Transactional
+    public DeviceResponseDTO saveDevice(DeviceRequestDTO request) {
         String serial = request.getSerialNumber().trim().toUpperCase();
 
-        // Validación rápida de patrón (opcional; ya puedes validarlo en el DTO también)
         if (!serial.matches("^[A-Z0-9-]{3,50}$")) {
             throw new IllegalArgumentException("El número de serie debe usar MAYÚSCULAS, números o guiones (3-50).");
         }
 
-        // Evitar duplicados (además de la unique constraint)
         if (deviceRepository.existsBySerialNumber(serial)) {
             throw new DataIntegrityViolationException("Duplicado serial");
         }
 
         WorkCenter wc = workCenterRepository.findById(request.getWorkCenterId())
-                .orElseThrow(() -> new RuntimeException(
-                        "WorkCenter no encontrado: id = " + request.getWorkCenterId()));
+                .orElseThrow(() -> new ResourceNotFoundException("WorkCenter", "id",
+                        String.valueOf(request.getWorkCenterId())));
 
         DeviceStatus status = (request.getStatus() != null) ? request.getStatus() : DeviceStatus.ACTIVO;
 
@@ -133,26 +145,73 @@ public class DeviceServiceImp implements DeviceService {
         entity.setStatus(status);
         entity.setWorkCenter(wc);
 
-        return deviceRepository.save(entity);
+        Device saved = deviceRepository.save(entity);
+        return toResponseDTO(saved);
     }
 
+    /* ===================== Buscar ===================== */
     @Override
-    public List<Device> searchBySerial(String query) {
+    public List<DeviceResponseDTO> searchBySerial(String query) {
         if (query == null || query.isBlank()) {
             return List.of();
         }
-        return deviceRepository.searchBySerial(query);
+        // si tienes versión paginada en repo, cámbialo aquí y arma PageResponseDTO
+        List<Device> result = deviceRepository.searchBySerial(query);
+        return result.stream().map(this::toResponseDTO).toList();
     }
 
+    /* ===================== Borrar ===================== */
     @Override
     @Transactional
     public void deleteBySerial(String serialNumber) {
-        Device device = deviceRepository.findBySerialNumberIgnoreCase(serialNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Device", "serialNumber", serialNumber));
-
-        try {
-            deviceRepository.delete(device);
-        } catch (DataIntegrityViolationException ex) {
+        if (serialNumber == null || serialNumber.isBlank()) {
+            throw new IllegalArgumentException("El número de serie es requerido");
         }
+        String serial = serialNumber.trim();
+
+        Device device = deviceRepository.findBySerialNumberIgnoreCase(serial)
+                .orElseThrow(() -> new ResourceNotFoundException("Device", "serialNumber", serial));
+
+        deviceRepository.delete(device);
+    }
+
+    /* ===================== Exportar Excel ===================== */
+    @Override
+    @Transactional(readOnly = true)
+    public FilePayload exportDevicesExcel() {
+        var devices = deviceRepository.findAll();
+        var reports = deviceReportRepository.findAllByOrderByReportingDateDesc();
+
+        byte[] bytes = deviceExcelService.exportDevicesExcel(devices, reports);
+        return new FilePayload(
+                bytes,
+                null,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    /* ===================== Mapeos ===================== */
+    private DeviceResponseDTO toResponseDTO(Device d) {
+        return new DeviceResponseDTO(
+                d.getId(),
+                d.getSerialNumber(),
+                d.getDeviceType() != null ? d.getDeviceType().name() : null,
+                d.getStatus() != null ? d.getStatus().name() : null,
+                d.getWorkCenter() != null ? d.getWorkCenter().getId() : null,
+                d.getWorkCenter() != null ? d.getWorkCenter().getName() : null);
+    }
+
+    @Override
+    public List<DeviceResponseDTO> findByTypeAndWorkCenter(DeviceType deviceType, String workCenter) {
+        return deviceRepository
+                .findByDeviceTypeAndWorkCenterName(deviceType, workCenter.trim())
+                .stream()
+                .map(d -> new DeviceResponseDTO(
+                        d.getId(),
+                        d.getSerialNumber(),
+                        d.getDeviceType().name(),
+                        d.getStatus().name(),
+                        d.getWorkCenter().getId(),
+                        d.getWorkCenter().getName()))
+                .toList();
     }
 }

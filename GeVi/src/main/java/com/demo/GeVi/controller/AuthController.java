@@ -2,56 +2,37 @@ package com.demo.GeVi.controller;
 
 import com.demo.GeVi.dto.LoginRequestDTO;
 import com.demo.GeVi.dto.LoginResponseDTO;
-import com.demo.GeVi.model.User;
-import com.demo.GeVi.repository.UserRepository;
-import com.demo.GeVi.security.JwtUtil;
-
-import java.util.List;
-
+import com.demo.GeVi.service.AuthService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Endpoints de autenticación.
+ * Mantiene el controlador delgado: delega la lógica en el servicio.
+ */
+@Slf4j
 @RestController
 @RequestMapping("/auth")
+@Validated
+@RequiredArgsConstructor
 public class AuthController {
 
-    private AuthenticationManager authenticationManager;
-    private JwtUtil jwtUtil;
-    private UserRepository userRepository;
+        private final AuthService authService;
 
-    public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil, UserRepository userRepository) {
-        this.authenticationManager = authenticationManager;
-        this.jwtUtil = jwtUtil;
-        this.userRepository = userRepository;
-    }
-
-    /*
-     * Valida credenciales y retorna un token JWT junto con el nombre completo del
-     * usuario.
-     */
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO loginRequest) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getRpe(), loginRequest.getPassword()));
-
-        User user = userRepository.findByRpe(loginRequest.getRpe())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        // Convierte tus entidades Rol a strings: "ADMIN", "USER"
-        List<String> roles = user.getRoles().stream()
-                .map(r -> r.getName()) // ajusta al nombre de tu campo
-                .toList();
-
-        // genera token con claim "roles"
-        String token = jwtUtil.generateTokenWithRoles(user.getRpe(), roles);
-
-        LoginResponseDTO response = new LoginResponseDTO(token, user.getName() + " " + user.getLastName(), roles);
-        return ResponseEntity.ok(response);
-    }
-
+        /**
+         * Valida credenciales y devuelve JWT + nombre y roles.
+         */
+        @PostMapping("/login")
+        public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO body) {
+                log.debug("Intento de login para RPE {}", body.rpe());
+                LoginResponseDTO response = authService.login(body);
+                return ResponseEntity.ok(response);
+        }
 }

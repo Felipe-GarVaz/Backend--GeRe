@@ -42,4 +42,11 @@ public interface DeviceRepository extends JpaRepository<Device, Integer> {
      */
     @EntityGraph(attributePaths = "workCenter")
     List<Device> findByStatus(DeviceStatus status);
+
+    @Query("""
+                select d from Device d
+                join fetch d.workCenter wc
+                where d.status = :status
+            """)
+    List<Device> findAllByStatusFetchWorkCenter(@Param("status") DeviceStatus status);
 }

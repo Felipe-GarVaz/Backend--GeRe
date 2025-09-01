@@ -1,7 +1,7 @@
 package com.demo.GeVi.controller;
 
-import com.demo.GeVi.model.WorkCenter;
-import com.demo.GeVi.repository.WorkCenterRepository;
+import com.demo.GeVi.service.WorkCenterResponseDTO;
+import com.demo.GeVi.service.WorkCenterService;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -16,18 +16,15 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class WorkCenterController {
 
-    private WorkCenterRepository workCenterRepository;
+    private final WorkCenterService workCenterService;
 
-    public WorkCenterController(WorkCenterRepository workCenterRepository) {
-        this.workCenterRepository = workCenterRepository;
+    public WorkCenterController(WorkCenterService workCenterService) {
+        this.workCenterService = workCenterService;
     }
 
-    /*
-     * Obtiene la lista completa de centros de trabajo.
-     */
+    /** Lista todos los centros de trabajo */
     @GetMapping
-    public ResponseEntity<List<WorkCenter>> getAll() {
-        List<WorkCenter> workCenters = workCenterRepository.findAll();
-        return ResponseEntity.ok(workCenters);
+    public ResponseEntity<List<WorkCenterResponseDTO>> getAll() {
+        return ResponseEntity.ok(workCenterService.findAll());
     }
 }

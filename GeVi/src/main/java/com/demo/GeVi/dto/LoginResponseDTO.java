@@ -2,20 +2,9 @@ package com.demo.GeVi.dto;
 
 import java.util.List;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-/*
- * DTO de respuesta para login exitoso.
- * Incluye el token JWT y el nombre completo del usuario.
- */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class LoginResponseDTO {
-
-    private String token;
-    private String name;
-    private List<String> roles;
+/** Salida del login. */
+public record LoginResponseDTO(
+        String token,
+        String name,
+        List<String> roles) {
 }

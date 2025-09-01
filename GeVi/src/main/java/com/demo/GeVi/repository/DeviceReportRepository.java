@@ -1,6 +1,7 @@
 package com.demo.GeVi.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -38,4 +39,6 @@ public interface DeviceReportRepository extends JpaRepository<DeviceReport, Inte
      * reporte.
      */
     List<DeviceReport> findAllByOrderByReportingDateDesc();
+
+    Optional<DeviceReport> findTopByDeviceIdOrderByReportingDateDesc(Integer deviceId);
 }
