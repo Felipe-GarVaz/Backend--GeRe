@@ -115,8 +115,13 @@ public class VehicleExcelService {
             sheet.autoSizeColumn(i);
     }
 
-    private static void createUnavailableSheet(Workbook workbook, List<VehicleReport> reports, String sheetName,
+    // ===== REEMPLAZA createUnavailableSheet POR ESTA VERSIÓN =====
+    private static void createUnavailableSheet(
+            Workbook workbook,
+            List<VehicleReport> reports,
+            String sheetName,
             Ubication ubication) {
+
         Sheet sheet = workbook.createSheet(sheetName);
         CellStyle headerStyle = createHeaderStyle(workbook);
         CellStyle summaryStyle = createSummaryStyle(workbook);
@@ -144,23 +149,45 @@ public class VehicleExcelService {
             cell.setCellStyle(headerStyle);
         }
 
-        // Datos
+        // ===== FILTRADO CORRECTO =====
+        // Solo consideramos vehículos que HOY están INDISPONIBLE, y usamos su último
+        // reporte de indisponibilidad para determinar la ubicación, la falla y la
+        // fecha.
+        java.util.Map<Integer, VehicleReport> lastIndisp = latestUnavailableByVehicle(reports);
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         int dataStartRow = 5;
         int rowIdx = dataStartRow;
 
+        // Importante: iterar por vehículo (estado actual), NO por reportes históricos
+        // Para evitar dependencias externas, conseguimos la lista de vehículos a través
+        // de los reportes
+        // (si ya tienes la lista "vehicles", puedes pasarla y filtrar directamente
+        // allí).
+        java.util.Set<Integer> seen = new java.util.HashSet<>();
         for (VehicleReport r : reports) {
-            if (r.getNewStatus() == Status.INDISPONIBLE && r.getLocationUnavailable() == ubication) {
+            Vehicle v = r.getVehicle();
+            if (v == null)
+                continue;
+            if (!seen.add(v.getId()))
+                continue; // evitar procesar el mismo vehículo varias veces aquí
+            // Tomar el último reporte de indisponibilidad de ese vehículo
+            VehicleReport last = lastIndisp.get(v.getId());
+            if (last == null)
+                continue; // no tiene indisponibilidad vigente
+            // Solo si el estado ACTUAL del vehículo es INDISPONIBLE y la ubicación coincide
+            if (v.getStatus() == Status.INDISPONIBLE && last.getLocationUnavailable() == ubication) {
                 Row row = sheet.createRow(rowIdx++);
-                row.createCell(0).setCellValue(r.getVehicle().getEconomical());
-                row.createCell(1).setCellValue(r.getVehicle().getBadge());
-                row.createCell(2).setCellValue(r.getVehicle().getWorkCenter().getName());
+                row.createCell(0).setCellValue(v.getEconomical());
+                row.createCell(1).setCellValue(v.getBadge());
+                row.createCell(2).setCellValue(v.getWorkCenter().getName());
 
-                String fail = (r.getFailType() != null) ? r.getFailType().getName() : r.getPersonalizedFailure();
-                row.createCell(3).setCellValue(fail != null ? fail : "N/A");
-                row.createCell(4).setCellValue(r.getReportingDate().format(formatter));
+                String fail = (last.getFailType() != null) ? last.getFailType().getName()
+                        : last.getPersonalizedFailure();
+                row.createCell(3).setCellValue((fail != null && !fail.isBlank()) ? fail : "N/A");
+                row.createCell(4).setCellValue(last.getReportingDate().format(formatter));
 
-                Duration d = Duration.between(r.getReportingDate(), LocalDateTime.now());
+                Duration d = Duration.between(last.getReportingDate(), LocalDateTime.now());
                 String elapsed = (d.toDays() > 0)
                         ? String.format("%dd %02dh %02dm", d.toDays(), d.toHoursPart(), d.toMinutesPart())
                         : String.format("%02dh %02dm", d.toHoursPart(), d.toMinutesPart());
@@ -168,15 +195,16 @@ public class VehicleExcelService {
             }
         }
 
-        int firstDataRow = dataStartRow + 1;
-        int lastDataRow = rowIdx;
+        // Fórmula TOTAL
+        int firstDataRow = dataStartRow + 1; // fila Excel (1-based)
+        int lastDataRowExcel = rowIdx; // rowIdx es índice + 1 => coincide con fila Excel de la última fila creada
         if (rowIdx > dataStartRow) {
-            totalCountCell.setCellFormula("SUBTOTAL(103,A" + firstDataRow + ":A" + lastDataRow + ")");
+            totalCountCell.setCellFormula("SUBTOTAL(103,A" + firstDataRow + ":A" + lastDataRowExcel + ")");
         } else {
             totalCountCell.setCellValue(0);
         }
 
-        sheet.setAutoFilter(new CellRangeAddress(4, rowIdx - 1, 0, headers.length - 1));
+        sheet.setAutoFilter(new CellRangeAddress(4, Math.max(rowIdx - 1, 4), 0, headers.length - 1));
         for (int i = 0; i < headers.length; i++)
             sheet.autoSizeColumn(i);
     }
@@ -218,5 +246,21 @@ public class VehicleExcelService {
     private static String subtotalFormula(String colRef, String value, int dataStartRow) {
         return "SUMPRODUCT(SUBTOTAL(103,OFFSET(" + colRef + ",ROW(" + colRef + ")-ROW(" + colRef.split(":")[0]
                 + "),0,1)),--(" + colRef + "=\"" + value + "\"))";
+    }
+
+    // ===== NUEVO: helper para obtener el último reporte INDISPONIBLE por vehículo
+    // =====
+    private static java.util.Map<Integer, VehicleReport> latestUnavailableByVehicle(List<VehicleReport> reports) {
+        java.util.Map<Integer, VehicleReport> map = new java.util.HashMap<>();
+        for (VehicleReport r : reports) {
+            if (r.getNewStatus() != Status.INDISPONIBLE)
+                continue;
+            Integer vid = r.getVehicle().getId();
+            VehicleReport prev = map.get(vid);
+            if (prev == null || r.getReportingDate().isAfter(prev.getReportingDate())) {
+                map.put(vid, r);
+            }
+        }
+        return map;
     }
 }
