@@ -7,10 +7,13 @@ import com.demo.GeVi.model.Process;
 import com.demo.GeVi.model.Property;
 import com.demo.GeVi.model.Status;
 import com.demo.GeVi.model.Vehicle;
+import com.demo.GeVi.model.VehicleReport;
 import com.demo.GeVi.model.WorkCenter;
 import com.demo.GeVi.repository.ProcessRepository;
+import com.demo.GeVi.repository.VehicleReportRepository;
 import com.demo.GeVi.repository.VehicleRepository;
 import com.demo.GeVi.repository.WorkCenterRepository;
+import com.demo.GeVi.service.VehicleExcelService;
 import com.demo.GeVi.service.VehicleService;
 
 import jakarta.persistence.EntityManager;
@@ -20,7 +23,6 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import jakarta.persistence.criteria.Predicate;
 
@@ -33,15 +35,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+@RequiredArgsConstructor // ← genera el constructor con los final
+@Transactional
 public class VehicleServiceImpl implements VehicleService {
 
-    @Autowired
-    private VehicleRepository vehicleRepository;
-    @Autowired
-    private WorkCenterRepository workCenterRepository;
-    @Autowired
-    private ProcessRepository processRepository;
+    private final VehicleRepository vehicleRepository;
+    private final WorkCenterRepository workCenterRepository;
+    private final ProcessRepository processRepository;
+    private final VehicleReportRepository vehicleReportRepository;
+    private final VehicleExcelService vehicleExcelService;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -246,6 +249,20 @@ public class VehicleServiceImpl implements VehicleService {
 
         vehicleRepository.delete(v);
         // alternativamente: vehicleRepository.deleteById(v.getId());
+    }
+
+    @Override
+    @Transactional
+    public FilePayload exportVehiclesExcel() {
+        List<Vehicle> vehicles = vehicleRepository.findAll();
+        List<VehicleReport> reports = vehicleReportRepository.findAllByOrderByReportingDateDesc();
+
+        byte[] bytes = vehicleExcelService.exportVehiclesExcel(vehicles, reports);
+        return new FilePayload(
+                bytes,
+                null, // si quieres, puedes generar aquí un nombre dinámico; si es null el controller
+                      // pone el default
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     }
     // ===== Métodos auxiliares =====
 

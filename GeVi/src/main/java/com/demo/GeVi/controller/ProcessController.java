@@ -8,26 +8,26 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.demo.GeVi.repository.ProcessRepository;
+import com.demo.GeVi.dto.ProcessResponseDTO;
+import com.demo.GeVi.service.ProcessService;
 
 @RestController
 @RequestMapping("/api/process")
 @CrossOrigin(origins = "*")
 public class ProcessController {
 
-    private ProcessRepository processRepository;
+    private final ProcessService processService;
 
-    public ProcessController(ProcessRepository processRepository) {
-        this.processRepository = processRepository;
+    public ProcessController(ProcessService processService) {
+        this.processService = processService;
     }
 
-    /*
+    /**
      * Obtiene la lista completa de procesos.
      */
     @GetMapping
-    public ResponseEntity<List<com.demo.GeVi.model.Process>> getAll() {
-        List<com.demo.GeVi.model.Process> process = processRepository.findAll();
-        return ResponseEntity.ok(process);
+    public ResponseEntity<List<ProcessResponseDTO>> getAll() {
+        return ResponseEntity.ok(processService.findAll());
     }
 
 }

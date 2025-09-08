@@ -48,4 +48,9 @@ public interface VehicleService {
     VehicleDTO getOneByEconomicalOrBadge(String query);
 
     void deleteByEconomical(String economical);
+
+    FilePayload exportVehiclesExcel();
+
+    record FilePayload(byte[] content, String fileName, String contentType) {
+    }
 }

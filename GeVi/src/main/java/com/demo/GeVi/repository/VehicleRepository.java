@@ -49,5 +49,6 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Integer>, JpaS
 
     // ===== NUEVO: búsquedas exactas (para seleccionar / eliminar) =====
     Optional<Vehicle> findByEconomicalIgnoreCase(String economical);
+
     Optional<Vehicle> findByBadgeIgnoreCase(String badge);
 }

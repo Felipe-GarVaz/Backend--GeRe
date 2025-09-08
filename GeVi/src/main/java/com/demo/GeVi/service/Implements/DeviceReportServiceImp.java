@@ -43,10 +43,11 @@ public class DeviceReportServiceImp implements DeviceReportService {
         String serial = request.getSerialNumber() == null ? null : request.getSerialNumber().trim();
 
         Device device = deviceRepository.findBySerialNumber(serial)
-                .orElseThrow(() -> new ResourceNotFoundException("Device", "serialNumber", serial));
+                .orElseThrow(() -> new ResourceNotFoundException("Dispositivo no encontrado (id=" + serial + ")"));
 
         WorkCenter workCenter = workCenterRepository.findById(request.getWorkCenterId())
-                .orElseThrow(() -> new ResourceNotFoundException("WorkCenter", "id", request.getWorkCenterId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Centro de trabajo no encontrado (id=" + request.getWorkCenterId() + ")"));
 
         // Si se desea reactivar el dispositivo: NO crear reporte
         if ("ACTIVO".equalsIgnoreCase(request.getNewStatus())) {
@@ -63,8 +64,8 @@ public class DeviceReportServiceImp implements DeviceReportService {
 
         if (request.getFailTypeDeviceId() != null) {
             failTypeDevice = failTypeDeviceRepository.findById(request.getFailTypeDeviceId())
-                    .orElseThrow(
-                            () -> new ResourceNotFoundException("FailTypeDevice", "id", request.getFailTypeDeviceId()));
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Tipo de falla no encontrado (id=" + request.getFailTypeDeviceId() + ")"));
         }
 
         // Construir y persistir reporte

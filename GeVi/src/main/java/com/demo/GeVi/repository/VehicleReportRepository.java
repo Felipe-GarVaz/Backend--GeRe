@@ -45,8 +45,9 @@ public interface VehicleReportRepository extends JpaRepository<VehicleReport, In
             """)
     List<VehicleReport> findLatestReportsInYard();
 
-    /*
-     * Último reporte de un vehículo por fecha descendente.
-     */
+    // ✅ ÚLTIMO reporte de UN vehículo (el más reciente por fecha)
     Optional<VehicleReport> findTopByVehicleIdOrderByReportingDateDesc(Integer vehicleId);
+
+    // ✅ TODOS los reportes, ordenados por fecha desc (si lo necesitas para Excel)
+    List<VehicleReport> findAllByOrderByReportingDateDesc();
 }

@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,14 +17,20 @@ import com.demo.GeVi.model.User;
 import com.demo.GeVi.model.Vehicle;
 import com.demo.GeVi.model.VehicleReport;
 import com.demo.GeVi.repository.FailTypeRepository;
+import com.demo.GeVi.repository.UserRepository;
 import com.demo.GeVi.repository.VehicleReportRepository;
 import com.demo.GeVi.repository.VehicleRepository;
 import com.demo.GeVi.service.VehicleReportService;
+
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Implementación del servicio de reportes de vehículos.
  */
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class VehicleReportServiceImp implements VehicleReportService {
 
     @Autowired
@@ -37,9 +42,23 @@ public class VehicleReportServiceImp implements VehicleReportService {
     @Autowired
     private FailTypeRepository failTypeRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     /**
      * Registra un nuevo reporte con validaciones y actualiza el vehículo.
      */
+    @Override
+    public void recordReport(VehicleReportRequestDTO request, String rpe) {
+        if (rpe == null || rpe.isBlank()) {
+            throw new IllegalArgumentException("No fue posible identificar al usuario (RPE vacío).");
+        }
+        User user = userRepository.findByRpe(rpe)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado para el RPE: " + rpe));
+        // Reusa tu método existente:
+        recordReport(request, user);
+    }
+
     public void recordReport(VehicleReportRequestDTO request, User user) {
         Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
                 .orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado"));
@@ -84,15 +103,12 @@ public class VehicleReportServiceImp implements VehicleReportService {
         }
 
         // Cierra cronómetro anterior
-        Optional<VehicleReport> lastReportOpt = vehicleReportRepository
-                .findTopByVehicleIdOrderByReportingDateDesc(request.getVehicleId());
-
-        if (lastReportOpt.isPresent()) {
-            VehicleReport lastReport = lastReportOpt.get();
-            long elapsed = Duration.between(lastReport.getReportingDate(), LocalDateTime.now()).getSeconds();
-            lastReport.setTimeElapsed(elapsed);
-            vehicleReportRepository.save(lastReport);
-        }
+        vehicleReportRepository.findTopByVehicleIdOrderByReportingDateDesc(request.getVehicleId())
+                .ifPresent(lastReport -> {
+                    long elapsed = Duration.between(lastReport.getReportingDate(), LocalDateTime.now()).getSeconds();
+                    lastReport.setTimeElapsed(elapsed);
+                    vehicleReportRepository.save(lastReport);
+                });
 
         // Crear nuevo reporte
         VehicleReport report = new VehicleReport();
@@ -160,5 +176,10 @@ public class VehicleReportServiceImp implements VehicleReportService {
     @Override
     public List<VehicleReport> getAllReports() {
         return vehicleReportRepository.findAll();
+    }
+
+    @Override
+    public List<FailType> getFailTypes() {
+        return failTypeRepository.findAll();
     }
 }

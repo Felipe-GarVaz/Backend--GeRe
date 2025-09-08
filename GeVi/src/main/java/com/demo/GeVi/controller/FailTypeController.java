@@ -1,33 +1,32 @@
 package com.demo.GeVi.controller;
 
-import com.demo.GeVi.model.FailType;
-import com.demo.GeVi.repository.FailTypeRepository;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.demo.GeVi.dto.FailTypeResponseDTO;
+import com.demo.GeVi.service.FailTypeService;
 
 import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/failTypes")
 @CrossOrigin(origins = "*")
 public class FailTypeController {
 
-    private FailTypeRepository failTypeRepository;
+    private final FailTypeService failTypeService;
 
-    public FailTypeController(FailTypeRepository failTypeRepository) {
-        this.failTypeRepository = failTypeRepository;
+    public FailTypeController(FailTypeService failTypeService) {
+        this.failTypeService = failTypeService;
     }
 
-    /*
-     * Obtiene todos los tipos de falla disponibles.
-     */
     @GetMapping
-    public ResponseEntity<List<FailType>> getAllFailTypes() {
-        List<FailType> failTypes = failTypeRepository.findAll();
-        return ResponseEntity.ok(failTypes);
+    public ResponseEntity<List<FailTypeResponseDTO>> getAll() {
+        return ResponseEntity.ok(failTypeService.findAll());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<FailTypeResponseDTO> getById(@PathVariable Integer id) {
+        return ResponseEntity.ok(failTypeService.findById(id));
     }
 }
