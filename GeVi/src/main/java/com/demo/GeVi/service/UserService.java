@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import com.demo.GeVi.dto.UserCreateRequestDTO;
 import com.demo.GeVi.dto.UserResponseDTO;
+import com.demo.GeVi.exception.UserAlreadyExistsException;
 import com.demo.GeVi.model.Role;
 import com.demo.GeVi.model.User;
 import com.demo.GeVi.repository.RoleRepository;
@@ -60,13 +61,13 @@ public class UserService implements UserDetailsService {
         final String rpeUpper = request.rpe().trim().toUpperCase();
 
         if (userRepository.existsByRpe(rpeUpper)) {
-            throw new Exception("Ya existe un usuario con RPE: " + rpeUpper);
+            throw new UserAlreadyExistsException("Ya existe un usuario con RPE: " + rpeUpper);
         }
 
         // Cargar roles por ID y validar que todos existan
         var roles = roleRepository.findAllById(request.roleIds());
         if (roles.size() != request.roleIds().size()) {
-            throw new Exception("Uno o más roles no existen.");
+            throw new IllegalArgumentException("Uno o más roles no existen.");
         }
 
         var user = User.builder()
