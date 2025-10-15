@@ -22,4 +22,8 @@ public class DeviceDTO {
     private int tpDolphin9900Damaged;
     private int readerDolphin9900;
     private int readerDolphin9900Damaged;
+    private int bluebird;
+    private int bluebirdDamaged;
+    private int phoneOthers;
+    private int phoneOthersDamaged;
 }

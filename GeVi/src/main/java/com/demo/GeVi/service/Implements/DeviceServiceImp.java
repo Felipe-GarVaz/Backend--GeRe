@@ -80,6 +80,16 @@ public class DeviceServiceImp implements DeviceService {
                             if (defective)
                                 dto.setReaderDolphin9900Damaged(dto.getReaderDolphin9900Damaged() + 1);
                         }
+                        case "BLUEBIRD" -> {
+                            dto.setBluebird(dto.getBluebird() + 1);
+                            if (defective)
+                                dto.setBluebirdDamaged(dto.getBluebirdDamaged() + 1);
+                        }
+                        case "CELULAR_OTROS" -> {
+                            dto.setPhoneOthers(dto.getPhoneOthers() + 1);
+                            if (defective)
+                                dto.setPhoneOthersDamaged(dto.getPhoneOthersDamaged() + 1);
+                        }
                         default -> {
                             /* no-op */ }
                     }

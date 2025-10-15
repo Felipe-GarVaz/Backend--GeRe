@@ -47,7 +47,7 @@ public class DeviceExcelServiceImp implements DeviceExcelService {
             CellStyle redStyle = createSolidStyle(workbook, IndexedColors.RED);
             CellStyle summaryStyle = createSummaryStyle(workbook);
 
-            int tableStartRow = 7;
+            int tableStartRow = 9;
             int dataStartRow = tableStartRow + 1;
 
             // Título
@@ -88,7 +88,9 @@ public class DeviceExcelServiceImp implements DeviceExcelService {
                     { "TP NEWLAND:", getSubtotalFormula(colRef, "TP_NEWLAND", dataStartRow) },
                     { "LECTOR NEWLAND:", getSubtotalFormula(colRef, "LECTOR_NEWLAND", dataStartRow) },
                     { "TP DOLPHIN 9900:", getSubtotalFormula(colRef, "TP_DOLPHIN_9900", dataStartRow) },
-                    { "LECTOR DOLPHIN 9900:", getSubtotalFormula(colRef, "LECTOR_DOLPHIN_9900", dataStartRow) }
+                    { "LECTOR DOLPHIN 9900:", getSubtotalFormula(colRef, "LECTOR_DOLPHIN_9900", dataStartRow) },
+                    { "BLUEBIRD:", getSubtotalFormula(colRef, "BLUEBIRD", dataStartRow) },
+                    { "CELULAR/OTROS:", getSubtotalFormula(colRef, "CELULAR_OTROS", dataStartRow) }
             };
 
             for (int i = 0; i < summary.length; i++) {
@@ -126,7 +128,7 @@ public class DeviceExcelServiceImp implements DeviceExcelService {
         titleCell.setCellValue("Resumen de dispositivos defectuosos");
         titleCell.setCellStyle(headerStyle);
 
-        int tableStartRow = 7;
+        int tableStartRow = 9;
         int dataStartRow = tableStartRow + 1;
         String[] headers = {
                 "Centro de Trabajo", "Número de Serie", "Tipo de Dispositivo", "Falla", "Fecha de Reporte",
@@ -198,7 +200,9 @@ public class DeviceExcelServiceImp implements DeviceExcelService {
                 { "TP NEWLAND:", getSubtotalFormula(colRef, "TP_NEWLAND", dataStartRow) },
                 { "LECTOR NEWLAND:", getSubtotalFormula(colRef, "LECTOR_NEWLAND", dataStartRow) },
                 { "TP DOLPHIN 9900:", getSubtotalFormula(colRef, "TP_DOLPHIN_9900", dataStartRow) },
-                { "LECTOR DOLPHIN 9900:", getSubtotalFormula(colRef, "LECTOR_DOLPHIN_9900", dataStartRow) }
+                { "LECTOR DOLPHIN 9900:", getSubtotalFormula(colRef, "LECTOR_DOLPHIN_9900", dataStartRow) },
+                { "BLUEBIRD:", getSubtotalFormula(colRef, "BLUEBIRD", dataStartRow) },
+                { "CELULARES/OTROS:", getSubtotalFormula(colRef, "CELULAR_OTROS", dataStartRow) }
         };
 
         for (int i = 0; i < summary.length; i++) {
