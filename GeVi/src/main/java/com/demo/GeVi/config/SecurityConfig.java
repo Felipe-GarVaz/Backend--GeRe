@@ -83,22 +83,20 @@ public class SecurityConfig {
     /*
      * Configuración global para CORS
      */
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of(
-                "http://localhost:3000",
-                "http://172.20.10.2:3000",
-                "http://192.168.1.64:3000",
-                "http://10.16.118.223:3000",
-                "http://192.168.1.64:3000"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Authorization"));
-        config.setAllowCredentials(true); // Permite el uso de cookies o tokens con CORS
+@Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration config = new CorsConfiguration();
+    
+    // Permitir cualquier origen (útil para desarrollo y Docker)
+    config.setAllowedOriginPatterns(List.of("*"));
+    
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    config.setAllowedHeaders(List.of("*"));
+    config.setExposedHeaders(List.of("Authorization"));
+    config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config); // Aplica configuración a todas las rutas
-        return source;
-    }
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", config);
+    return source;
+}
 }
