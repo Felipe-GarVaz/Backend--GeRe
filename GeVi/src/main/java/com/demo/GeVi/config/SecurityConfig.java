@@ -36,30 +36,35 @@ public class SecurityConfig {
      * Configuración principal de la cadena de seguridad
      */
     @Bean
- public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
-            .cors(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                // Preflight CORS
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // Preflight CORS
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // Auth público
-                .requestMatchers("/auth/**").permitAll()
+                        // Endpoints públicos
+                        .requestMatchers("/auth/**").permitAll()
 
-                // Endpoints protegidos por rol
-                .requestMatchers(HttpMethod.POST,   "/api/vehicles/**").hasRole("ADMIN")   // crear
-                .requestMatchers(HttpMethod.PUT,    "/api/vehicles/**").hasRole("ADMIN")   // editar (si aplica)
-                .requestMatchers(HttpMethod.DELETE, "/api/vehicles/**").hasRole("ADMIN")   // eliminar
+                        // Rutas del frontend (permitidas)
+                        .requestMatchers(
+                                "/**", "/index.html",
+                                "/favicon.ico", "/manifest.json",
+                                "/static/**", "/js/**", "/css/**", "/images/**",
+                                "/logo192.png", "/logo512.png",
+                                "/home/**", "/dashboard/**", "/vehicles/**", "/users/**")
+                        .permitAll()
 
-                // Resto del API requiere estar autenticado
-                .requestMatchers("/api/**").authenticated()
+                        // Resto del API requiere estar autenticado
+                        .requestMatchers("/api/**").authenticated()
 
-                // Cualquier otra ruta (si tienes estáticos, docs, etc.)
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                        // Cualquier otra ruta (si tienes estáticos, docs, etc.)
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable());
 
         return http.build();
     }
@@ -83,20 +88,20 @@ public class SecurityConfig {
     /*
      * Configuración global para CORS
      */
-@Bean
-public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration config = new CorsConfiguration();
-    
-    // Permitir cualquier origen (útil para desarrollo y Docker)
-    config.setAllowedOriginPatterns(List.of("*"));
-    
-    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    config.setAllowedHeaders(List.of("*"));
-    config.setExposedHeaders(List.of("Authorization"));
-    config.setAllowCredentials(true);
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
 
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/**", config);
-    return source;
-}
+        // Permitir cualquier origen (útil para desarrollo y Docker)
+        config.setAllowedOriginPatterns(List.of("*"));
+
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 }
