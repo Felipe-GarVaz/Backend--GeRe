@@ -2,7 +2,7 @@ package com.demo.GeVi.service.Implements;
 
 import org.springframework.stereotype.Service;
 
-import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import com.demo.GeVi.dto.VehicleHistoryDTO;
@@ -40,12 +40,10 @@ public class VehicleHistoryServiceImp implements VehicleHistoryService {
     @Override
     public List<VehicleHistoryDTO> getVehicleHistory(String searchTerm) {
         List<VehicleReport> reports = vehicleHistoryRepository.searchByEconomicalOrBadge(searchTerm);
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
         reports.sort(Comparator
                 .comparing((VehicleReport r) -> r.getVehicle().getId())
-                .thenComparing(VehicleReport::getReportingDate));
+                .thenComparing(VehicleReport::getReportingDate, Comparator.reverseOrder()));
 
         Map<Integer, Status> lastStatusByVehicle = new HashMap<>();
         List<VehicleHistoryDTO> historyList = new ArrayList<>();
@@ -58,8 +56,8 @@ public class VehicleHistoryServiceImp implements VehicleHistoryService {
             dto.setId(report.getId());
             dto.setEconomical(report.getVehicle().getEconomical());
             dto.setBadge(report.getVehicle().getBadge());
-            dto.setDate(report.getReportingDate().format(dateFormatter));
-            dto.setHour(report.getReportingDate().format(timeFormatter));
+            dto.setDate(report.getReportingDate().toLocalDate().toString());
+            dto.setHour(report.getReportingDate().toLocalTime().truncatedTo(ChronoUnit.MINUTES).toString());
             dto.setPreviousState(previousStatus.toString());
             dto.setNewState(report.getNewStatus().toString());
             dto.setFailType(

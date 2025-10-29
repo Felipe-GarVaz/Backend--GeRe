@@ -2,6 +2,7 @@ package com.demo.GeVi.service.Implements;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -66,9 +67,12 @@ public class VehicleReportServiceImp implements VehicleReportService {
         Status newStatus = request.getNewStatus();
         Integer failTypeId = request.getFailTypeId();
         String personalizedFailure = request.getPersonalizedFailure();
+        if (personalizedFailure == null) {
+            personalizedFailure = "";
+        }
         Ubication locationUnavailable = request.getLocationUnavailable();
 
-        // Validaciones de negocio
+        // === Validaciones ===
         if (newStatus == Status.DISPONIBLE) {
             if (failTypeId != null || (personalizedFailure != null && !personalizedFailure.isBlank())) {
                 throw new IllegalArgumentException("No debe registrar una falla cuando el estado es DISPONIBLE.");
@@ -95,22 +99,25 @@ public class VehicleReportServiceImp implements VehicleReportService {
             throw new IllegalArgumentException("El nuevo kilometraje no puede ser menor al actual.");
         }
 
-        // Obtener tipo de falla (si aplica)
+        // === Buscar tipo de falla (si aplica) ===
         FailType failType = null;
         if (failTypeId != null) {
             failType = failTypeRepository.findById(failTypeId)
                     .orElseThrow(() -> new IllegalArgumentException("Tipo de falla no válido"));
         }
 
-        // Cierra cronómetro anterior
+        // === Cerrar cronómetro SOLO si pasa de INDISPONIBLE -> DISPONIBLE ===
         vehicleReportRepository.findTopByVehicleIdOrderByReportingDateDesc(request.getVehicleId())
                 .ifPresent(lastReport -> {
-                    long elapsed = Duration.between(lastReport.getReportingDate(), LocalDateTime.now()).getSeconds();
-                    lastReport.setTimeElapsed(elapsed);
-                    vehicleReportRepository.save(lastReport);
+                    if (vehicle.getStatus() == Status.INDISPONIBLE && newStatus == Status.DISPONIBLE) {
+                        long elapsed = Duration.between(lastReport.getReportingDate(), LocalDateTime.now())
+                                .getSeconds();
+                        lastReport.setTimeElapsed(elapsed);
+                        vehicleReportRepository.save(lastReport);
+                    }
                 });
 
-        // Crear nuevo reporte
+        // === Crear nuevo reporte ===
         VehicleReport report = new VehicleReport();
         report.setVehicle(vehicle);
         report.setUser(user);
@@ -119,12 +126,15 @@ public class VehicleReportServiceImp implements VehicleReportService {
         report.setPersonalizedFailure(personalizedFailure);
         report.setMileage(request.getMileage());
         report.setLocationUnavailable(locationUnavailable);
-        report.setReportingDate(LocalDateTime.now());
+        report.setReportingDate(LocalDateTime.now(ZoneId.of("America/Mexico_City")));
+
+        // Si el nuevo estado es DISPONIBLE, este reporte no tiene cronómetro activo
+        // Si es INDISPONIBLE u OPERANDO_CON_FALLA, el cronómetro comienza aquí
         report.setTimeElapsed(null);
 
         vehicleReportRepository.save(report);
 
-        // Actualizar estado del vehículo
+        // === Actualizar vehículo ===
         vehicle.setStatus(newStatus);
         vehicle.setMileage(request.getMileage());
         vehicleRepository.save(vehicle);

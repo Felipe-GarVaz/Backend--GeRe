@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -183,7 +184,7 @@ public class DeviceExcelServiceImp implements DeviceExcelService {
 
                 dt = last.getReportingDate() != null ? last.getReportingDate().format(formatter) : "";
                 if (last.getReportingDate() != null) {
-                    elapsed = formatElapsed(Duration.between(last.getReportingDate(), LocalDateTime.now()));
+                    elapsed = formatElapsed(Duration.between(last.getReportingDate(), LocalDateTime.now(ZoneId.of("America/Mexico_City"))));
                 }
             }
 

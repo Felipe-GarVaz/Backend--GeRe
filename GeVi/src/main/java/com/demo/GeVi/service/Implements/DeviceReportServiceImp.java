@@ -1,6 +1,7 @@
 package com.demo.GeVi.service.Implements;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,7 +76,7 @@ public class DeviceReportServiceImp implements DeviceReportService {
         report.setDeviceType(device.getDeviceType()); // usa el del Device para consistencia
         report.setFailTypeDevice(failTypeDevice);
         report.setPersonalizedFailure(hasPersonalized ? personalized.trim() : null);
-        report.setReportingDate(LocalDateTime.now());
+        report.setReportingDate(LocalDateTime.now(ZoneId.of("America/Mexico_City")));
 
         // Marcar como DEFECTUOSO
         device.setStatus(DeviceStatus.DEFECTUOSO);

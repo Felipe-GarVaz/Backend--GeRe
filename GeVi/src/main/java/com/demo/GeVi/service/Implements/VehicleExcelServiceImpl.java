@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -175,7 +176,7 @@ public class VehicleExcelServiceImpl implements VehicleExcelService {
                 row.createCell(3).setCellValue((fail != null && !fail.isBlank()) ? fail : "N/A");
                 row.createCell(4).setCellValue(last.getReportingDate().format(formatter));
 
-                Duration d = Duration.between(last.getReportingDate(), LocalDateTime.now());
+                Duration d = Duration.between(last.getReportingDate(), LocalDateTime.now(ZoneId.of("America/Mexico_City")));
                 String elapsed = (d.toDays() > 0)
                         ? String.format("%dd %02dh %02dm", d.toDays(), d.toHoursPart(), d.toMinutesPart())
                         : String.format("%02dh %02dm", d.toHoursPart(), d.toMinutesPart());
